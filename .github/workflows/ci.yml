@@ -21,7 +21,19 @@ jobs:
       - name: Unit tests (delivery fee rules)
         run: npm test
       - name: Build (includes type check)
-        run: npm run build
+        shell: bash
+        run: |
+          set -o pipefail
+          if ! npm run build 2>&1 | tee build.log; then
+            # Surface the error as an annotation so it is visible without the raw log.
+            msg=$(grep -v '^\s*$' build.log | tail -n 60 | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')
+            echo "::error title=Build failed::$msg"
+            if npx tsc --noEmit --pretty false > tsc.log 2>&1; then :; else
+              tmsg=$(head -n 60 tsc.log | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')
+              echo "::error title=Type errors::$tmsg"
+            fi
+            exit 1
+          fi
         env:
           # Placeholder values so the build can run; no real project is contacted.
           NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
