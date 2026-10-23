@@ -1,8 +1,8 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
-
-type CookieToSet = { name: string; value: string; options: CookieOptions };
 import { cookies } from "next/headers";
 import { supabaseEnv } from "@/lib/env";
+
+type CookieToSet = { name: string; value: string; options: CookieOptions };
 
 /** Supabase client for Server Components, Server Actions and Route Handlers. */
 export async function createClient() {

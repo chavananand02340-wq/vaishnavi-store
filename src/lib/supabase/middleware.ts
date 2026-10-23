@@ -1,7 +1,7 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { NextResponse, type NextRequest } from "next/server";
 
 type CookieToSet = { name: string; value: string; options: CookieOptions };
-import { NextResponse, type NextRequest } from "next/server";
 
 const PROTECTED = ["/admin", "/staff"];
 
