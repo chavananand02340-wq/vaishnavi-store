@@ -79,7 +79,7 @@ const settingsSchema = z.object({
   upi_id: z
     .string()
     .trim()
-    .refine((v) => v === "" || /^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$/.test(v), "Invalid UPI ID")
+    .refine((v) => v === "" || /^[a-zA-Z0-9.\-_]{2,200}@[a-zA-Z]{2,64}$/.test(v), "Invalid UPI ID")
     .transform((v) => (v === "" ? null : v)),
   upi_payee_name: text(80),
 });

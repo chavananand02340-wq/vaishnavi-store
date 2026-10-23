@@ -9,7 +9,8 @@
 --   * owner: full access to catalogue, settings and all orders.
 -- =====================================================================
 
-create extension if not exists pg_trgm;
+create schema if not exists extensions;
+create extension if not exists pg_trgm with schema extensions;
 
 -- ---------- Enums ----------------------------------------------------
 create type public.staff_role     as enum ('owner', 'staff');
@@ -79,7 +80,7 @@ create table public.store_settings (
 
   cod_enabled                   boolean not null default true,
   upi_enabled                   boolean not null default false,
-  upi_id                        text check (upi_id ~ '^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$'),
+  upi_id                        text check (upi_id ~ '^[a-zA-Z0-9.\-_]{2,200}@[a-zA-Z]{2,64}$'),
   upi_payee_name                text check (length(upi_payee_name) <= 80),
 
   low_stock_threshold           integer not null default 5 check (low_stock_threshold >= 0),
@@ -127,7 +128,7 @@ create table public.products (
 );
 create index products_category_idx on public.products (category_id);
 create index products_search_idx on public.products
-  using gin ((name || ' ' || coalesce(search_keywords, '')) gin_trgm_ops);
+  using gin ((name || ' ' || coalesce(search_keywords, '')) extensions.gin_trgm_ops);
 create trigger products_updated_at before update on public.products
   for each row execute function public.tg_set_updated_at();
 
@@ -474,6 +475,7 @@ begin
     'lines', v_lines,
     'subtotal_paise', v_subtotal,
     'delivery_fee_paise', v_fee,
+    'base_fee_paise', v_base_fee,
     'total_paise', v_subtotal + v_fee,
     'free_delivery_remaining_paise',
       case when s.free_delivery_enabled and v_subtotal < s.free_delivery_threshold_paise
@@ -607,6 +609,7 @@ begin
       s.default_eta_minutes,
       jsonb_build_object(
         'delivery_fee_paise', s.delivery_fee_paise,
+        'base_fee_paise', (q ->> 'base_fee_paise')::integer,
         'free_delivery_enabled', s.free_delivery_enabled,
         'free_delivery_threshold_paise', s.free_delivery_threshold_paise,
         'cod_enabled', s.cod_enabled,
