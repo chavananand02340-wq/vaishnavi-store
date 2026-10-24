@@ -1,0 +1,35 @@
+name: Reference screenshots
+on:
+  push:
+    branches: [ref-shot]
+permissions:
+  contents: write
+jobs:
+  ref:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm init -y >/dev/null && npm install playwright@1.49.1 && npx playwright install --with-deps chromium
+      - name: Shoot
+        run: |
+          cat > s.mjs <<'JS'
+          import { chromium } from "playwright";
+          const b = await chromium.launch();
+          for (const [name, opts] of [["phone", { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true }], ["laptop", { viewport: { width: 1366, height: 860 } }]]) {
+            const c = await b.newContext(opts);
+            const p = await c.newPage();
+            await p.goto("https://jgkkiranastore.com/", { waitUntil: "networkidle", timeout: 60000 }).catch(() => {});
+            for (let y = 0; y < 12000; y += 600) { await p.evaluate((y) => window.scrollTo(0, y), y); await p.waitForTimeout(250); }
+            await p.evaluate(() => window.scrollTo(0, 0)); await p.waitForTimeout(800);
+            await p.screenshot({ path: `out/${name}-top.png` });
+            await p.screenshot({ path: `out/${name}-full.png`, fullPage: true });
+          }
+          await b.close();
+          JS
+          mkdir -p out && node s.mjs
+      - name: Push
+        run: |
+          cd out && git init -q -b reference && git config user.name ci && git config user.email ci@example.com && git add -A && git commit -qm ref
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git" reference
