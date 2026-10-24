@@ -1,75 +1,79 @@
-import { requireTeam } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
-import { Notice } from "@/components/Notice";
-import { OrderAlerts } from "@/components/orders/OrderAlerts";
-import { ORDER_SELECT, OrderCard, type OrderRow } from "@/components/orders/OrderCard";
+"use client";
 
-const ACTIVE = ["new", "confirmed", "out_for_delivery"] as const;
+import { supabase } from "@/lib/supabase/browser";
+import { istDateKey } from "@/lib/hours";
+import { useAsync, must } from "@/lib/useAsync";
+import { useTeam } from "@/components/admin/team";
+import { OrderAlerts } from "@/components/admin/OrderAlerts";
+import { ORDER_SELECT, OrderCard, type OrderRow } from "@/components/admin/OrderCard";
+import { Empty, ErrorBox, Spinner, STATUS } from "@/components/admin/ui";
 
-function istDay(d: Date) {
-  return d.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
-}
+export default function LiveOrders() {
+  const { role } = useTeam();
+  const { data, error, loading, reload } = useAsync(async () => {
+    const sb = supabase();
+    const since = new Date(Date.now() - 36 * 3600_000).toISOString();
+    const [active, done, s] = await Promise.all([
+      sb.from("orders").select(ORDER_SELECT).in("status", ["new", "confirmed", "out_for_delivery"]).order("created_at").limit(100),
+      sb.from("orders").select(ORDER_SELECT).in("status", ["delivered", "cancelled"]).gte("created_at", since).order("created_at", { ascending: false }).limit(50),
+      sb.from("store_settings").select("store_name, default_eta_minutes").eq("id", 1).single(),
+    ]);
+    return {
+      active: must(active) as unknown as OrderRow[],
+      done: (must(done) as unknown as OrderRow[]).filter((o) => istDateKey(o.created_at) === istDateKey(new Date())),
+      storeName: (s.data?.store_name as string) ?? "Vaishnavi Store",
+      eta: (s.data?.default_eta_minutes as number) ?? 30,
+    };
+  });
 
-export default async function StaffOrders({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
-  const { error } = await searchParams;
-  const me = await requireTeam();
-  const supabase = await createClient();
-
-  // RLS limits staff to active orders + today's orders.
-  const since = new Date(Date.now() - 36 * 3600_000).toISOString();
-  const [{ data: activeData }, { data: recentData }, { data: s }] = await Promise.all([
-    supabase.from("orders").select(ORDER_SELECT).in("status", [...ACTIVE]).order("created_at", { ascending: true }).limit(100),
-    supabase.from("orders").select(ORDER_SELECT).in("status", ["delivered", "cancelled"]).gte("created_at", since).order("created_at", { ascending: false }).limit(50),
-    supabase.from("store_settings").select("store_name, default_eta_minutes").eq("id", 1).single(),
-  ]);
-
-  const active = (activeData ?? []) as unknown as OrderRow[];
-  const today = istDay(new Date());
-  const finished = ((recentData ?? []) as unknown as OrderRow[]).filter((o) => istDay(new Date(o.created_at)) === today);
-  const newOnes = active.filter((o) => o.status === "new");
-  const latestNew = newOnes[newOnes.length - 1];
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? null;
-  const common = {
-    isOwner: me.role === "owner",
-    returnTo: "/staff",
-    storeName: (s?.store_name as string) ?? "Vaishnavi Store",
-    siteUrl,
-    defaultEta: (s?.default_eta_minutes as number) ?? 30,
-    showDetailLink: me.role === "owner",
-  };
-
-  const groups: { title: string; list: OrderRow[] }[] = [
-    { title: "New — confirm these", list: newOnes },
-    { title: "Packing", list: active.filter((o) => o.status === "confirmed") },
-    { title: "Out for delivery", list: active.filter((o) => o.status === "out_for_delivery") },
+  const active = data?.active ?? [];
+  const fresh = active.filter((o) => o.status === "new");
+  const groups = [
+    { key: "new", title: "New, confirm these", list: fresh },
+    { key: "confirmed", title: "Packing", list: active.filter((o) => o.status === "confirmed") },
+    { key: "out_for_delivery", title: "On the way", list: active.filter((o) => o.status === "out_for_delivery") },
   ];
+  const common = { isOwner: role === "owner", storeName: data?.storeName ?? "", defaultEta: data?.eta ?? 30, onChanged: reload, detailLink: role === "owner" };
 
   return (
-    <div className="space-y-6">
-      <OrderAlerts newIds={newOnes.map((o) => o.id)} latestNewNo={latestNew?.order_no ?? null} />
-      <Notice error={error ? (error === "invalid" ? "Something went wrong. Refresh and try again." : error) : null} />
+    <div className="space-y-5">
+      <OrderAlerts newIds={fresh.map((o) => o.id)} latestNewNo={fresh.at(-1)?.order_no ?? null} onChange={reload} />
 
-      {active.length === 0 && <p className="card text-center text-sm text-neutral-600">No active orders right now.</p>}
+      {/* Count strip: one colour per stage */}
+      <div className="grid grid-cols-3 gap-2">
+        {groups.map((g) => (
+          <a key={g.key} href={`#${g.key}`} className={`rounded-2xl px-3 py-3 ring-1 ${STATUS[g.key].pill}`}>
+            <span className="block font-display text-[30px] font-extrabold leading-none">{g.list.length}</span>
+            <span className="text-[13px] font-bold">{STATUS[g.key].label}</span>
+          </a>
+        ))}
+      </div>
 
-      {groups.map(
-        (g) =>
-          g.list.length > 0 && (
-            <section key={g.title}>
-              <h2 className="mb-3 text-lg font-bold">
-                {g.title} ({g.list.length})
-              </h2>
-              <div className="space-y-3">
-                {g.list.map((o) => <OrderCard key={o.id} o={o} {...common} />)}
-              </div>
-            </section>
-          ),
+      {loading && !data ? (
+        <Spinner />
+      ) : error ? (
+        <ErrorBox text={error} retry={reload} />
+      ) : active.length === 0 ? (
+        <Empty icon="bell" title="No orders right now" text="Keep this screen open. New orders ring the alarm and appear here." />
+      ) : (
+        groups.map(
+          (g) =>
+            g.list.length > 0 && (
+              <section key={g.key} id={g.key} className="scroll-mt-20">
+                <h2 className="mb-2 text-[18px] font-bold">{g.title}</h2>
+                <div className="grid gap-3 md:grid-cols-2">
+                  {g.list.map((o) => <OrderCard key={o.id} o={o} {...common} />)}
+                </div>
+              </section>
+            ),
+        )
       )}
 
-      {finished.length > 0 && (
+      {data && data.done.length > 0 && (
         <section>
-          <h2 className="mb-3 text-lg font-semibold text-neutral-700">Finished today ({finished.length})</h2>
-          <div className="space-y-3">
-            {finished.map((o) => <OrderCard key={o.id} o={o} {...common} />)}
+          <h2 className="mb-2 text-[18px] font-bold text-muted">Finished today ({data.done.length})</h2>
+          <div className="grid gap-3 md:grid-cols-2">
+            {data.done.map((o) => <OrderCard key={o.id} o={o} {...common} />)}
           </div>
         </section>
       )}

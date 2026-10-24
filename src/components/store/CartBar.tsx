@@ -3,53 +3,66 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { formatPaise } from "@/lib/money";
+import { Icon } from "@/components/Icon";
 import { useCart } from "./cart";
 
-/** Sticky bottom bar with cart total and free-delivery progress. */
-export function CartBar() {
-  const { ready, count, subtotal, delivery } = useCart();
-  const path = usePathname();
-  if (!ready || count === 0 || path === "/cart" || path === "/checkout" || path.startsWith("/order/")) return null;
-
-  const left = delivery?.freeEnabled ? Math.max(0, delivery.threshold - subtotal) : 0;
-
+/** Free-delivery progress — the one place the store spends colour on motion. */
+export function FreeDeliveryMeter({ subtotal, dark = false }: { subtotal: number; dark?: boolean }) {
+  const { settings: s } = useCart();
+  if (!s?.free_delivery_enabled || s.free_delivery_threshold_paise <= 0) return null;
+  const pct = Math.min(100, Math.round((subtotal / s.free_delivery_threshold_paise) * 100));
+  const left = Math.max(0, s.free_delivery_threshold_paise - subtotal);
   return (
-    <div className="fixed inset-x-0 bottom-0 z-30 border-t border-neutral-200 bg-white/95 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur">
-      <div className="mx-auto max-w-5xl">
-        {delivery?.freeEnabled && (
-          <p className="mb-1.5 text-center text-xs text-neutral-600">
-            {left > 0 ? (
-              <>Add <b>{formatPaise(left)}</b> more for <b className="text-brand-700">FREE delivery</b></>
-            ) : (
-              <b className="text-brand-700">🎉 You get FREE delivery</b>
-            )}
-          </p>
-        )}
-        <Link href="/cart" className="flex items-center justify-between rounded-xl bg-brand-600 px-4 py-3 text-white">
-          <span className="text-sm">
-            <b>{count} item{count === 1 ? "" : "s"}</b> · {formatPaise(subtotal)}
-          </span>
-          <span className="text-sm font-bold">View cart ›</span>
-        </Link>
+    <div>
+      <p className={`text-[13px] font-semibold ${dark ? "text-white" : "text-ink"}`}>
+        {left > 0 ? `Add ${formatPaise(left)} more for free delivery` : "Free delivery unlocked"}
+      </p>
+      <div className={`mt-1 h-1.5 overflow-hidden rounded-full ${dark ? "bg-white/20" : "bg-leaf-100"}`}>
+        <div
+          className="h-full rounded-full bg-haldi-400 transition-[width] duration-500 ease-out"
+          style={{ width: `${pct}%` }}
+          role="progressbar"
+          aria-valuenow={pct}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label="Progress to free delivery"
+        />
       </div>
     </div>
   );
 }
 
-export function CartIcon() {
-  const { ready, count } = useCart();
+export function CartBar() {
+  const { ready, count, subtotal, lines } = useCart();
+  const path = usePathname();
+  if (!ready || count === 0) return null;
+  if (path === "/cart" || path === "/checkout" || path.startsWith("/order") || path.startsWith("/p/")) return null;
+
+  const thumbs = lines.slice(-3).reverse();
   return (
-    <Link href="/cart" className="relative flex size-10 items-center justify-center rounded-full bg-white/15" aria-label={`Cart, ${count} items`}>
-      <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-        <path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 8H6" strokeLinecap="round" strokeLinejoin="round" />
-        <circle cx="10" cy="20" r="1.3" />
-        <circle cx="17" cy="20" r="1.3" />
-      </svg>
-      {ready && count > 0 && (
-        <span className="absolute -right-1 -top-1 flex min-w-5 items-center justify-center rounded-full bg-accent-500 px-1 text-[11px] font-bold text-neutral-900">
-          {count}
+    <div className="fixed inset-x-0 bottom-0 z-40 px-3 pb-[max(.75rem,env(safe-area-inset-bottom))]">
+      <Link
+        href="/cart"
+        className="animate-pop mx-auto flex max-w-xl items-center gap-3 rounded-2xl bg-leaf-800 px-3 py-2.5 text-white shadow-[0_10px_30px_-10px_rgba(8,42,27,.7)]"
+      >
+        <div className="flex -space-x-3">
+          {thumbs.map((l) => (
+            <span key={l.variantId} className="size-10 overflow-hidden rounded-lg border-2 border-leaf-800 bg-white">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {l.image ? <img src={l.image} alt="" className="size-full object-contain" /> : null}
+            </span>
+          ))}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-[15px] font-bold leading-tight">
+            {count} item{count === 1 ? "" : "s"}, {formatPaise(subtotal)}
+          </p>
+          <FreeDeliveryMeter subtotal={subtotal} dark />
+        </div>
+        <span className="flex items-center gap-1 rounded-xl bg-haldi-500 px-3 py-2 text-[15px] font-bold text-leaf-900">
+          Cart <Icon name="right" className="size-4" strokeWidth={2.6} />
         </span>
-      )}
-    </Link>
+      </Link>
+    </div>
   );
 }

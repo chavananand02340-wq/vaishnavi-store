@@ -1,46 +1,121 @@
 @import "tailwindcss";
 
+/*
+  Vaishnavi Store design tokens.
+  leaf  = the shop's signboard green (primary actions, brand)
+  haldi = turmeric yellow (delivery promise, cart, highlights)
+  kumkum = offer / discount red (used sparingly)
+  page  = cool sage-tinted background so white cards lift off it
+*/
 @theme {
-  --color-brand-50: #eef7f1;
-  --color-brand-100: #d5ecdd;
-  --color-brand-600: #1f6b3d;
-  --color-brand-700: #185632;
-  --color-brand-800: #134428;
-  --color-accent-500: #f2a900;
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
+  --color-leaf-50: #eaf4ee;
+  --color-leaf-100: #d3e8db;
+  --color-leaf-200: #a9d1b8;
+  --color-leaf-500: #1e7a4c;
+  --color-leaf-600: #146b3f;
+  --color-leaf-700: #0f5132;
+  --color-leaf-800: #0b3d26;
+  --color-leaf-900: #082a1b;
+
+  --color-haldi-100: #fff4cc;
+  --color-haldi-300: #ffd95a;
+  --color-haldi-400: #f7c531;
+  --color-haldi-500: #f2b705;
+  --color-haldi-700: #8a6400;
+
+  --color-kumkum-50: #fdecea;
+  --color-kumkum-600: #b42318;
+
+  --color-page: #f2f5f0;
+  --color-ink: #18241d;
+  --color-muted: #5b6b61;
+  --color-line: #dfe6e0;
+
+  --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-mukta), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --radius-card: 14px;
 }
 
 html {
   -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
-  background: #f7f8f7;
-  color: #1a1f1c;
+  background: var(--color-page);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  line-height: 1.45;
 }
 
-/* Reusable pieces. Large tap targets for phone use. */
+:focus-visible {
+  outline: 3px solid var(--color-haldi-400);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---------- shared pieces ---------- */
 @utility field {
-  @apply block w-full rounded-lg border border-neutral-300 bg-white px-3 py-2.5 text-base outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-100;
+  @apply block w-full rounded-xl border border-line bg-white px-3.5 py-3 text-[16px] text-ink outline-none transition placeholder:text-neutral-400 focus:border-leaf-600 focus:ring-4 focus:ring-leaf-100;
 }
 @utility label {
-  @apply mb-1 block text-sm font-medium text-neutral-700;
+  @apply mb-1.5 block text-[14px] font-semibold text-ink;
 }
 @utility hint {
-  @apply mt-1 text-xs text-neutral-500;
-}
-@utility card {
-  @apply rounded-xl border border-neutral-200 bg-white p-4 shadow-sm;
+  @apply mt-1 text-[13px] leading-snug text-muted;
 }
 @utility btn {
-  @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition disabled:opacity-60;
+  @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-4 text-[15px] font-bold transition active:scale-[.98] disabled:pointer-events-none disabled:opacity-50;
 }
-@utility btn-primary {
-  @apply btn bg-brand-600 text-white hover:bg-brand-700;
+@utility btn-leaf {
+  @apply btn bg-leaf-700 text-white hover:bg-leaf-800;
 }
-@utility btn-ghost {
-  @apply btn border border-neutral-300 bg-white text-neutral-800 hover:bg-neutral-50;
+@utility btn-haldi {
+  @apply btn bg-haldi-500 text-leaf-900 hover:bg-haldi-400;
+}
+@utility btn-plain {
+  @apply btn border border-line bg-white text-ink hover:bg-leaf-50;
 }
 @utility btn-danger {
-  @apply btn border border-red-200 bg-white text-red-700 hover:bg-red-50;
+  @apply btn border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100;
+}
+@utility panel {
+  @apply rounded-[var(--radius-card)] border border-line bg-white;
+}
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@keyframes pop {
+  0% { transform: scale(0.9); }
+  60% { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+.animate-pop {
+  animation: pop 220ms ease-out;
+}
+
+@keyframes ring {
+  0%, 100% { transform: rotate(0); }
+  20% { transform: rotate(14deg); }
+  40% { transform: rotate(-12deg); }
+  60% { transform: rotate(8deg); }
+  80% { transform: rotate(-4deg); }
+}
+.animate-ring {
+  animation: ring 900ms ease-in-out infinite;
+  transform-origin: 50% 10%;
 }

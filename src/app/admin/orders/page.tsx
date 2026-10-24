@@ -1,95 +1,128 @@
+"use client";
+
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
+import { supabase } from "@/lib/supabase/browser";
 import { formatPaise } from "@/lib/money";
-import { PAYMENT_LABEL, STATUS_LABEL, istTime, type OrderRow } from "@/components/orders/OrderCard";
+import { istDayStartISO, istTime } from "@/lib/hours";
+import { useAsync } from "@/lib/useAsync";
+import { Empty, ErrorBox, PageTitle, Spinner, STATUS, StatusPill } from "@/components/admin/ui";
 
 const PAGE = 40;
-const RANGES: Record<string, number | null> = { today: 1, "7d": 7, "30d": 30, all: null };
+const RANGES = { today: { label: "Today", days: 0 }, "7d": { label: "7 days", days: 6 }, "30d": { label: "30 days", days: 29 }, all: { label: "All", days: null } } as const;
+type RangeKey = keyof typeof RANGES;
+type Row = { id: string; order_no: number; customer_name: string; phone: string; total_paise: number; status: string; payment_method: string; payment_status: string; created_at: string };
 
-function istMidnightDaysAgo(days: number) {
-  const now = new Date(Date.now() + 330 * 60_000);
-  const midnight = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) - 330 * 60_000;
-  return new Date(midnight - (days - 1) * 86400_000).toISOString();
-}
+function OrdersInner() {
+  const sp = useSearchParams();
+  const router = useRouter();
+  const range = (sp.get("range") as RangeKey) in RANGES ? (sp.get("range") as RangeKey) : "7d";
+  const status = sp.get("status") && STATUS[sp.get("status")!] ? sp.get("status")! : "";
+  const q = sp.get("q") ?? "";
+  const page = Math.max(1, Number(sp.get("page")) || 1);
+  const [term, setTerm] = useState(q);
 
-export default async function AdminOrders({
-  searchParams,
-}: {
-  searchParams: Promise<{ status?: string; range?: string; q?: string; page?: string }>;
-}) {
-  const sp = await searchParams;
-  const range = sp.range && sp.range in RANGES ? sp.range : "7d";
-  const status = sp.status && sp.status in STATUS_LABEL ? sp.status : "";
-  const q = (sp.q ?? "").replace(/\D/g, "").slice(0, 10);
-  const page = Math.max(1, Number(sp.page) || 1);
+  const setParam = (patch: Record<string, string>) => {
+    const p = new URLSearchParams({ range, status, q, page: "1", ...patch });
+    for (const [k, v] of [...p.entries()]) if (!v || (k === "page" && v === "1")) p.delete(k);
+    router.replace(`/admin/orders?${p.toString()}`);
+  };
 
-  const supabase = await createClient();
-  let query = supabase
-    .from("orders")
-    .select("id, order_no, status, customer_name, phone, total_paise, payment_method, payment_status, created_at", { count: "exact" })
-    .order("created_at", { ascending: false })
-    .range((page - 1) * PAGE, page * PAGE - 1);
-  const days = RANGES[range];
-  if (days) query = query.gte("created_at", istMidnightDaysAgo(days));
-  if (status) query = query.eq("status", status);
-  if (q.length === 10) query = query.eq("phone", q);
-  else if (q) query = query.eq("order_no", Number(q));
+  const { data, error, loading, reload } = useAsync(async () => {
+    let query = supabase()
+      .from("orders")
+      .select("id, order_no, customer_name, phone, total_paise, status, payment_method, payment_status, created_at", { count: "exact" })
+      .order("created_at", { ascending: false })
+      .range((page - 1) * PAGE, page * PAGE - 1);
+    const days = RANGES[range].days;
+    if (days !== null) query = query.gte("created_at", istDayStartISO(days));
+    if (status) query = query.eq("status", status);
+    const digits = q.replace(/\D/g, "");
+    if (digits.length >= 10) query = query.eq("phone", digits.slice(-10));
+    else if (digits) query = query.eq("order_no", Number(digits));
+    const { data: rows, count, error: e } = await query;
+    if (e) throw new Error(e.message);
+    return { rows: (rows ?? []) as Row[], count: count ?? 0 };
+  }, [range, status, q, page]);
 
-  const { data, count } = await query;
-  const orders = (data ?? []) as unknown as OrderRow[];
-  const sales = orders.filter((o) => o.status !== "cancelled").reduce((n, o) => n + o.total_paise, 0);
-  const pages = Math.max(1, Math.ceil((count ?? 0) / PAGE));
-  const link = (p: number) => `/admin/orders?${new URLSearchParams({ range, status, q, page: String(p) }).toString()}`;
+  const rows = data?.rows ?? [];
+  const sales = rows.filter((o) => o.status !== "cancelled").reduce((n, o) => n + o.total_paise, 0);
+  const pages = Math.max(1, Math.ceil((data?.count ?? 0) / PAGE));
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-xl font-bold">All orders</h1>
-      <form className="card grid grid-cols-2 gap-2 sm:grid-cols-4" action="/admin/orders">
-        <select className="field" name="range" defaultValue={range} aria-label="Date range">
-          <option value="today">Today</option>
-          <option value="7d">Last 7 days</option>
-          <option value="30d">Last 30 days</option>
-          <option value="all">All time</option>
-        </select>
-        <select className="field" name="status" defaultValue={status} aria-label="Status">
-          <option value="">Any status</option>
-          {Object.entries(STATUS_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-        </select>
-        <input className="field col-span-2" name="q" defaultValue={sp.q ?? ""} inputMode="numeric" placeholder="Order no. or 10-digit phone" />
-        <button className="btn-ghost col-span-2 sm:col-span-4" type="submit">Show</button>
+    <div>
+      <PageTitle title="All orders" hue="orders" icon="orders" />
+
+      <div className="no-scrollbar -mx-4 mb-2 flex gap-2 overflow-x-auto px-4">
+        {(Object.keys(RANGES) as RangeKey[]).map((k) => (
+          <button key={k} type="button" onClick={() => setParam({ range: k })} className={`shrink-0 rounded-full px-4 py-2 text-[14px] font-bold ring-1 ${k === range ? "bg-indigo-600 text-white ring-indigo-600" : "bg-white text-ink ring-line"}`}>
+            {RANGES[k].label}
+          </button>
+        ))}
+      </div>
+      <div className="no-scrollbar -mx-4 mb-3 flex gap-2 overflow-x-auto px-4">
+        <button type="button" onClick={() => setParam({ status: "" })} className={`shrink-0 rounded-full px-3 py-1.5 text-[13px] font-bold ring-1 ${!status ? "bg-ink text-white ring-ink" : "bg-white ring-line"}`}>Any status</button>
+        {Object.entries(STATUS).map(([k, v]) => (
+          <button key={k} type="button" onClick={() => setParam({ status: k })} className={`shrink-0 rounded-full px-3 py-1.5 text-[13px] font-bold ring-1 ${k === status ? v.pill : "bg-white ring-line"}`}>
+            {v.label}
+          </button>
+        ))}
+      </div>
+      <form onSubmit={(e) => { e.preventDefault(); setParam({ q: term.trim() }); }} className="mb-4 flex gap-2">
+        <input className="field" inputMode="numeric" value={term} onChange={(e) => setTerm(e.target.value)} placeholder="Order number or customer mobile" />
+        <button className="btn bg-indigo-600 text-white" type="submit">Find</button>
       </form>
 
-      <p className="text-sm text-neutral-600">
-        {count ?? 0} orders · this page {formatPaise(sales)} (excluding cancelled)
-      </p>
+      {data && (
+        <p className="mb-2 text-[14px] text-muted">
+          {data.count} orders. Sales on this page {formatPaise(sales)}, without cancelled.
+        </p>
+      )}
 
-      <ul className="divide-y divide-neutral-100 rounded-xl bg-white ring-1 ring-neutral-200">
-        {orders.length === 0 && <li className="p-4 text-sm text-neutral-600">No orders found.</li>}
-        {orders.map((o) => (
-          <li key={o.id}>
-            <Link href={`/admin/orders/${o.id}`} className="flex items-center justify-between gap-3 p-3">
-              <div className="min-w-0">
-                <p className="font-semibold">VS-{o.order_no} · {o.customer_name}</p>
-                <p className="text-xs text-neutral-500">
-                  {new Date(o.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" })} {istTime(o.created_at)} · {o.payment_method.toUpperCase()} {PAYMENT_LABEL[o.payment_status]}
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="font-semibold">{formatPaise(o.total_paise)}</p>
-                <p className="text-xs text-neutral-500">{STATUS_LABEL[o.status]}</p>
-              </div>
-            </Link>
-          </li>
-        ))}
-      </ul>
+      {loading && !data ? (
+        <Spinner />
+      ) : error ? (
+        <ErrorBox text={error} retry={reload} />
+      ) : rows.length === 0 ? (
+        <Empty icon="orders" title="No orders here" text="Try a longer date range or another status." />
+      ) : (
+        <ul className="divide-y divide-line overflow-hidden rounded-2xl bg-white ring-1 ring-line">
+          {rows.map((o) => (
+            <li key={o.id}>
+              <Link href={`/admin/order?id=${o.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-page">
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[15px] font-bold">VS-{o.order_no}, {o.customer_name}</span>
+                  <span className="text-[13px] text-muted">
+                    {new Date(o.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" })}, {istTime(o.created_at)},{" "}
+                    {o.payment_method === "cod" ? "cash" : "UPI"} {o.payment_status === "paid" ? "paid" : "not paid"}
+                  </span>
+                </span>
+                <span className="text-right">
+                  <span className="block text-[15px] font-extrabold">{formatPaise(o.total_paise)}</span>
+                  <StatusPill status={o.status} />
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
 
       {pages > 1 && (
-        <nav className="flex items-center justify-between text-sm">
-          {page > 1 ? <Link className="btn-ghost" href={link(page - 1)}>‹ Newer</Link> : <span />}
-          <span>Page {page} of {pages}</span>
-          {page < pages ? <Link className="btn-ghost" href={link(page + 1)}>Older ›</Link> : <span />}
+        <nav className="mt-4 flex items-center justify-between">
+          <button type="button" className="btn-plain" disabled={page <= 1} onClick={() => setParam({ page: String(page - 1) })}>Newer</button>
+          <span className="text-[14px] text-muted">Page {page} of {pages}</span>
+          <button type="button" className="btn-plain" disabled={page >= pages} onClick={() => setParam({ page: String(page + 1) })}>Older</button>
         </nav>
       )}
     </div>
+  );
+}
+
+export default function AdminOrders() {
+  return (
+    <Suspense fallback={<Spinner />}>
+      <OrdersInner />
+    </Suspense>
   );
 }

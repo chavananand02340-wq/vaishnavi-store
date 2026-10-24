@@ -1,103 +1,138 @@
+"use client";
+
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { useState } from "react";
+import { supabase } from "@/lib/supabase/browser";
 import { formatPaise } from "@/lib/money";
-import { setAcceptingOrders } from "./actions";
+import { formatTime, isOpenNow, istDayStartISO, istTime } from "@/lib/hours";
+import { useAsync, must } from "@/lib/useAsync";
+import { refreshStorefront, useTeam } from "@/components/admin/team";
+import { ErrorBox, Spinner, StatusPill, Tile } from "@/components/admin/ui";
+import { Icon } from "@/components/Icon";
+import { useToast } from "@/components/Toast";
 
-function istDayStartISO() {
-  // Midnight today in India (UTC+05:30), as an ISO timestamp.
-  const now = new Date();
-  const ist = new Date(now.getTime() + 330 * 60_000);
-  const midnightIstAsUtc = Date.UTC(ist.getUTCFullYear(), ist.getUTCMonth(), ist.getUTCDate()) - 330 * 60_000;
-  return new Date(midnightIstAsUtc).toISOString();
-}
+type Recent = { id: string; order_no: number; customer_name: string; total_paise: number; status: string; created_at: string };
 
-export default async function AdminHome() {
-  const supabase = await createClient();
-  const dayStart = istDayStartISO();
+export default function Dashboard() {
+  const { name } = useTeam();
+  const toast = useToast();
+  const [switching, setSwitching] = useState(false);
 
-  const [settingsRes, openRes, todayRes, activeRes] = await Promise.all([
-    supabase
-      .from("store_settings")
-      .select("accepting_orders, open_time, close_time, delivery_fee_paise, free_delivery_enabled, free_delivery_threshold_paise, cod_enabled, default_eta_minutes, low_stock_threshold")
-      .eq("id", 1)
-      .single(),
-    supabase.rpc("store_is_open"),
-    supabase.from("orders").select("total_paise, status").gte("created_at", dayStart),
-    supabase.from("orders").select("id", { count: "exact", head: true }).in("status", ["new", "confirmed", "out_for_delivery"]),
-  ]);
+  const { data, error, loading, reload, setData } = useAsync(async () => {
+    const sb = supabase();
+    const [s, today, active, recent, low] = await Promise.all([
+      sb.from("store_settings").select("accepting_orders, open_time, close_time, low_stock_threshold, delivery_fee_paise, free_delivery_threshold_paise, free_delivery_enabled, default_eta_minutes").eq("id", 1).single(),
+      sb.from("orders").select("total_paise, status").gte("created_at", istDayStartISO()),
+      sb.from("orders").select("id", { count: "exact", head: true }).in("status", ["new", "confirmed", "out_for_delivery"]),
+      sb.from("orders").select("id, order_no, customer_name, total_paise, status, created_at").order("created_at", { ascending: false }).limit(6),
+      sb.from("product_variants").select("id, stock_qty").eq("is_active", true),
+    ]);
+    const settings = must(s) as {
+      accepting_orders: boolean; open_time: string; close_time: string; low_stock_threshold: number;
+      delivery_fee_paise: number; free_delivery_threshold_paise: number; free_delivery_enabled: boolean; default_eta_minutes: number;
+    };
+    const t = (must(today) ?? []) as { total_paise: number; status: string }[];
+    return {
+      settings,
+      todayCount: t.length,
+      todaySales: t.filter((o) => o.status !== "cancelled").reduce((n, o) => n + o.total_paise, 0),
+      active: active.count ?? 0,
+      recent: (must(recent) ?? []) as Recent[],
+      lowStock: ((low.data ?? []) as { stock_qty: number }[]).filter((v) => v.stock_qty <= settings.low_stock_threshold).length,
+    };
+  });
 
-  const s = settingsRes.data;
-  const today = todayRes.data ?? [];
-  const todaySales = today.filter((o) => o.status !== "cancelled").reduce((sum, o) => sum + o.total_paise, 0);
+  async function toggleOrders() {
+    if (!data) return;
+    const next = !data.settings.accepting_orders;
+    setSwitching(true);
+    const { error: e } = await supabase().from("store_settings").update({ accepting_orders: next }).eq("id", 1);
+    setSwitching(false);
+    if (e) return toast("Couldn't change. Try again.", "error");
+    setData({ ...data, settings: { ...data.settings, accepting_orders: next } });
+    toast(next ? "Online orders are on" : "Online orders are paused");
+    void refreshStorefront();
+  }
 
-  const lowStock = s
-    ? await supabase
-        .from("product_variants")
-        .select("id", { count: "exact", head: true })
-        .eq("is_active", true)
-        .lte("stock_qty", s.low_stock_threshold)
-    : null;
+  if (loading && !data) return <Spinner />;
+  if (error || !data) return <ErrorBox text={error ?? "Couldn't load."} retry={reload} />;
+
+  const s = data.settings;
+  const openNow = isOpenNow(s);
+  const hour = Number(new Date().toLocaleString("en-IN", { hour: "numeric", hour12: false, timeZone: "Asia/Kolkata" }));
+  const greet = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
   return (
-    <div className="space-y-4">
-      <section className="card flex items-center justify-between gap-4">
-        <div>
-          <p className="text-sm text-neutral-500">Online orders</p>
-          <p className={`text-lg font-semibold ${openRes.data ? "text-brand-700" : "text-red-700"}`}>
-            {openRes.data ? "Open — taking orders" : "Closed — not taking orders"}
+    <div className="space-y-5">
+      <div>
+        <p className="text-[15px] text-muted">{greet}{name && !name.includes("@") ? `, ${name}` : ""}</p>
+        <h1 className="font-display text-[28px] font-extrabold leading-tight">Today at the shop</h1>
+      </div>
+
+      {/* Orders on/off: the most important switch */}
+      <section className={`flex flex-wrap items-center gap-4 rounded-2xl p-4 ring-1 ${openNow ? "bg-leaf-700 text-white ring-leaf-800" : "bg-rose-50 text-rose-950 ring-rose-200"}`}>
+        <span className={`flex size-12 items-center justify-center rounded-full ${openNow ? "bg-white/15" : "bg-rose-100"}`}>
+          <Icon name="power" className="size-6" strokeWidth={2.4} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[18px] font-extrabold">{openNow ? "Taking orders now" : "Not taking orders"}</p>
+          <p className={`text-[14px] ${openNow ? "text-white/80" : "text-rose-800"}`}>
+            {!s.accepting_orders ? "You paused online orders." : `Shop hours ${formatTime(s.open_time)} to ${formatTime(s.close_time)}.`}
           </p>
-          {s && (
-            <p className="text-xs text-neutral-500">
-              Hours {s.open_time.slice(0, 5)}–{s.close_time.slice(0, 5)} · switch is {s.accepting_orders ? "ON" : "OFF"}
-            </p>
-          )}
         </div>
-        {s && (
-          <form action={setAcceptingOrders}>
-            <input type="hidden" name="value" value={s.accepting_orders ? "false" : "true"} />
-            <button className={s.accepting_orders ? "btn-danger" : "btn-primary"} type="submit">
-              {s.accepting_orders ? "Stop orders" : "Start orders"}
-            </button>
-          </form>
+        <button
+          type="button"
+          onClick={toggleOrders}
+          disabled={switching}
+          className={`btn min-w-36 ${s.accepting_orders ? "bg-white text-rose-700 ring-1 ring-rose-200" : "bg-leaf-700 text-white"}`}
+        >
+          {switching ? "Saving…" : s.accepting_orders ? "Pause orders" : "Start orders"}
+        </button>
+      </section>
+
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <Tile href="/staff" hue="live" icon="bell" value={String(data.active)} title="Active orders" note="New, packing, on the way" />
+        <Tile href="/admin/orders?range=today" hue="orders" icon="orders" value={String(data.todayCount)} title="Orders today" />
+        <Tile href="/admin/orders?range=today" hue="home" icon="rupee" value={formatPaise(data.todaySales)} title="Sales today" note="Without cancelled" />
+        <Tile href="/admin/products?filter=low" hue="danger" icon="alert" value={String(data.lowStock)} title="Low stock" note={`${s.low_stock_threshold} or fewer left`} />
+      </div>
+
+      <section>
+        <h2 className="mb-2 text-[17px] font-bold">Quick actions</h2>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <Tile href="/admin/products/new" hue="products" icon="plus" title="Add product" note="Photo, size, price" />
+          <Tile href="/admin/categories" hue="categories" icon="tag" title="Categories" note="Shelves on the website" />
+          <Tile href="/admin/settings" hue="settings" icon="settings" title="Timing & delivery" note={`₹${s.delivery_fee_paise / 100} fee, ${s.default_eta_minutes} min`} />
+          <Tile href="/admin/pincodes" hue="pincodes" icon="pin" title="PIN codes" note="Where you deliver" />
+        </div>
+      </section>
+
+      <section className="rounded-2xl bg-white ring-1 ring-line">
+        <div className="flex items-center justify-between px-4 pt-4">
+          <h2 className="text-[17px] font-bold">Latest orders</h2>
+          <Link href="/admin/orders" className="text-[14px] font-bold text-indigo-700">See all</Link>
+        </div>
+        {data.recent.length === 0 ? (
+          <p className="px-4 py-6 text-[15px] text-muted">No orders yet. Share your store link on WhatsApp and Instagram to get the first one.</p>
+        ) : (
+          <ul className="mt-2 divide-y divide-line">
+            {data.recent.map((o) => (
+              <li key={o.id}>
+                <Link href={`/admin/order?id=${o.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-page">
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[15px] font-bold">VS-{o.order_no}, {o.customer_name}</span>
+                    <span className="text-[13px] text-muted">{istTime(o.created_at)}</span>
+                  </span>
+                  <span className="text-right">
+                    <span className="block text-[15px] font-extrabold">{formatPaise(o.total_paise)}</span>
+                    <StatusPill status={o.status} />
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
         )}
       </section>
-
-      <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Stat label="Today's orders" value={String(today.length)} />
-        <Stat label="Today's sales" value={formatPaise(todaySales)} />
-        <Stat label="Active orders" value={String(activeRes.count ?? 0)} href="/staff" />
-        <Stat label="Low stock items" value={String(lowStock?.count ?? 0)} />
-      </section>
-
-      {s && (
-        <section className="card text-sm">
-          <h2 className="mb-2 font-semibold">Current delivery rules</h2>
-          <ul className="space-y-1 text-neutral-700">
-            <li>Delivery fee: {formatPaise(s.delivery_fee_paise)}</li>
-            <li>
-              Free delivery:{" "}
-              {s.free_delivery_enabled ? `on orders of ${formatPaise(s.free_delivery_threshold_paise)} or more` : "off (fee always applies)"}
-            </li>
-            <li>Cash on Delivery: {s.cod_enabled ? "available on every order" : "turned off"}</li>
-            <li>Expected delivery: about {s.default_eta_minutes} minutes</li>
-          </ul>
-          <Link href="/admin/settings" className="mt-3 inline-block font-medium text-brand-700 underline">
-            Change settings
-          </Link>
-        </section>
-      )}
-
-      <p className="text-xs text-neutral-500">Products and order management arrive in the next phases.</p>
     </div>
   );
-}
-
-function Stat({ label, value, href }: { label: string; value: string; href?: string }) {
-  const body = (
-    <div className="card h-full">
-      <p className="text-xs text-neutral-500">{label}</p>
-      <p className="mt-1 text-xl font-bold">{value}</p>
-    </div>
-  );
-  return href ? <Link href={href}>{body}</Link> : body;
 }

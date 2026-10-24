@@ -1,11 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getCategories, getProduct, getSettings, toCard } from "@/lib/store";
+import { getCategories, getProduct } from "@/lib/store-data";
+import { toCard } from "@/lib/cards";
 import { imageUrl } from "@/lib/catalog";
+import { StoreHeader } from "@/components/store/StoreHeader";
 import { ProductDetail } from "@/components/store/ProductDetail";
+import { Icon } from "@/components/Icon";
 
 type Props = { params: Promise<{ id: string }> };
+
+// Built on first visit, then served from the CDN.
+export async function generateStaticParams() {
+  return [];
+}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
@@ -14,19 +22,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const card = toCard(p);
   return {
     title: p.name,
-    description: p.description ?? `Buy ${p.name} online from Vaishnavi Store with home delivery.`,
+    description: p.description ?? `Order ${p.name} from Vaishnavi Store for home delivery.`,
     openGraph: card?.image ? { images: [card.image] } : undefined,
   };
 }
 
 export default async function ProductPage({ params }: Props) {
   const { id } = await params;
-  const [p, categories, s] = await Promise.all([getProduct(id), getCategories(), getSettings()]);
+  const [p, categories] = await Promise.all([getProduct(id), getCategories()]);
   if (!p) notFound();
   const cat = categories.find((c) => c.id === p.category_id);
-  if (!cat) notFound(); // hidden category → product not sold
   const card = toCard(p);
-  if (!card) notFound();
+  if (!cat || !card) notFound();
 
   const images = [...p.product_images]
     .sort((a, b) => a.sort_order - b.sort_order)
@@ -34,17 +41,14 @@ export default async function ProductPage({ params }: Props) {
     .filter((x): x is string => Boolean(x));
 
   return (
-    <div className="space-y-4">
-      <nav className="text-sm text-neutral-500" aria-label="Breadcrumb">
-        <Link href="/" className="underline">Home</Link> › <Link href={`/c/${cat.slug}`} className="underline">{cat.name}</Link>
-      </nav>
-      <ProductDetail product={card} images={images} whatsapp={s?.whatsapp_number ? `https://wa.me/91${s.whatsapp_number}` : null} />
-      {p.description && (
-        <section className="card">
-          <h2 className="mb-1 font-semibold">About this product</h2>
-          <p className="whitespace-pre-line text-sm text-neutral-700">{p.description}</p>
-        </section>
-      )}
-    </div>
+    <>
+      <StoreHeader compact />
+      <main className="mx-auto w-full max-w-6xl px-4 pt-3">
+        <Link href={`/c/${cat.slug}`} className="mb-3 inline-flex items-center gap-1 text-[15px] font-semibold text-leaf-700">
+          <Icon name="left" className="size-4" strokeWidth={2.6} /> {cat.name}
+        </Link>
+        <ProductDetail product={card} images={images} description={p.description} />
+      </main>
+    </>
   );
 }

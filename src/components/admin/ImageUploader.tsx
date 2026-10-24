@@ -1,14 +1,14 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { useRef, useState } from "react";
+import { supabase } from "@/lib/supabase/browser";
 import { IMAGE_BUCKET } from "@/lib/catalog";
-import { registerProductImage } from "@/app/admin/catalog-actions";
+import { Icon } from "@/components/Icon";
+import { useToast } from "@/components/Toast";
 
 const MAX_SIDE = 1200;
 
-/** Shrinks a phone photo before upload: max 1200px, WebP (or JPEG where WebP isn't supported). */
+/** Shrinks a phone photo before upload (max 1200 px, WebP or JPEG). */
 async function shrink(file: File): Promise<{ blob: Blob; ext: "webp" | "jpg" }> {
   const bitmap = await createImageBitmap(file);
   const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
@@ -18,77 +18,70 @@ async function shrink(file: File): Promise<{ blob: Blob; ext: "webp" | "jpg" }> 
   canvas.width = w;
   canvas.height = h;
   const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Canvas not supported");
-  ctx.fillStyle = "#ffffff"; // transparent PNGs get a white background
+  if (!ctx) throw new Error("This phone can't process photos");
+  ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, w, h);
   ctx.drawImage(bitmap, 0, 0, w, h);
   bitmap.close();
-
-  const toBlob = (type: string, q: number) =>
-    new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, q));
+  const toBlob = (type: string, q: number) => new Promise<Blob | null>((r) => canvas.toBlob(r, type, q));
   const webp = await toBlob("image/webp", 0.82);
   if (webp && webp.type === "image/webp") return { blob: webp, ext: "webp" };
   const jpg = await toBlob("image/jpeg", 0.85);
-  if (!jpg) throw new Error("Could not process photo");
+  if (!jpg) throw new Error("Couldn't process the photo");
   return { blob: jpg, ext: "jpg" };
 }
 
-export function ImageUploader({ productId, disabled }: { productId: string; disabled?: boolean }) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const router = useRouter();
-  const [status, setStatus] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [, startTransition] = useTransition();
+export function ImageUploader({ productId, count, onDone }: { productId: string; count: number; onDone: () => void }) {
+  const input = useRef<HTMLInputElement>(null);
+  const toast = useToast();
+  const [busy, setBusy] = useState<string | null>(null);
+  const full = count >= 6;
 
   async function onFiles(files: FileList | null) {
     if (!files?.length) return;
-    setBusy(true);
-    const supabase = createClient();
+    const sb = supabase();
+    let n = count;
     try {
       for (const [i, file] of Array.from(files).entries()) {
-        if (!file.type.startsWith("image/")) {
-          setStatus("Only photos can be uploaded.");
-          continue;
+        if (n >= 6) {
+          toast("A product can have up to 6 photos.", "error");
+          break;
         }
-        setStatus(`Uploading photo ${i + 1} of ${files.length}…`);
+        if (!file.type.startsWith("image/")) continue;
+        setBusy(`Uploading ${i + 1} of ${files.length}…`);
         const { blob, ext } = await shrink(file);
         const path = `products/${productId}/${crypto.randomUUID()}.${ext}`;
-        const { error } = await supabase.storage
-          .from(IMAGE_BUCKET)
-          .upload(path, blob, { contentType: blob.type, cacheControl: "31536000", upsert: false });
-        if (error) throw new Error(error.message);
-        const res = await registerProductImage(productId, path);
-        if (!res.ok) throw new Error(res.message);
+        const up = await sb.storage.from(IMAGE_BUCKET).upload(path, blob, { contentType: blob.type, cacheControl: "31536000" });
+        if (up.error) throw new Error(up.error.message);
+        const ins = await sb.from("product_images").insert({ product_id: productId, storage_path: path, sort_order: n * 10 });
+        if (ins.error) {
+          await sb.storage.from(IMAGE_BUCKET).remove([path]);
+          throw new Error(ins.error.message);
+        }
+        n++;
       }
-      setStatus("Photo added.");
-      startTransition(() => router.refresh());
+      toast("Photo added");
+      onDone();
     } catch (e) {
-      setStatus(e instanceof Error ? `Upload failed: ${e.message}` : "Upload failed.");
+      toast(e instanceof Error ? `Upload failed: ${e.message}` : "Upload failed", "error");
     } finally {
-      setBusy(false);
-      if (inputRef.current) inputRef.current.value = "";
+      setBusy(null);
+      if (input.current) input.current.value = "";
     }
   }
 
   return (
-    <div>
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        multiple
-        className="hidden"
-        onChange={(e) => onFiles(e.target.files)}
-      />
+    <>
+      <input ref={input} type="file" accept="image/*" multiple className="hidden" onChange={(e) => onFiles(e.target.files)} />
       <button
         type="button"
-        className="btn-ghost w-full"
-        disabled={busy || disabled}
-        onClick={() => inputRef.current?.click()}
+        disabled={!!busy || full}
+        onClick={() => input.current?.click()}
+        className="flex aspect-square w-full flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-teal-300 bg-teal-50 text-teal-800 disabled:opacity-50"
       >
-        {busy ? "Uploading…" : "📷 Add photo (camera or gallery)"}
+        <Icon name="camera" className="size-7" />
+        <span className="px-1 text-center text-[12.5px] font-bold leading-tight">{busy ?? (full ? "6 photos max" : "Add photo")}</span>
       </button>
-      {status && <p className="hint mt-2" role="status">{status}</p>}
-    </div>
+    </>
   );
 }

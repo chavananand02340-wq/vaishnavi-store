@@ -1,0 +1,53 @@
+name: Design screenshots
+
+# Builds the app against a mock database and saves phone/laptop screenshots
+# to the `screenshots` branch, so the design can be reviewed without a device.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, redesign]
+    paths: ["src/**", "tools/**", ".github/workflows/screenshots.yml"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: screenshots
+  cancel-in-progress: true
+
+jobs:
+  shots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: mock-anon-key
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npm install --no-save playwright@1.49.1 && npx playwright install --with-deps chromium
+      - name: Start mock database
+        run: node tools/mock-supabase.mjs > mock.log 2>&1 &
+      - name: Build
+        run: npm run build
+      - name: Start app
+        run: |
+          npx next start -p 3000 > app.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:3000/login > /dev/null && break; sleep 1; done
+      - name: Take screenshots
+        run: node tools/screenshots.mjs
+      - name: Save to screenshots branch
+        run: |
+          cp app.log mock.log shots/ || true
+          cd shots
+          git init -q -b screenshots
+          git config user.name "ci"
+          git config user.email "ci@example.com"
+          git add -A
+          git commit -qm "Screenshots for ${GITHUB_SHA}"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git" screenshots

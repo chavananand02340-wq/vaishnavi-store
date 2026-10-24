@@ -1,139 +1,221 @@
+"use client";
+
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
-import { Notice } from "@/components/Notice";
-import { SubmitButton } from "@/components/SubmitButton";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useMemo, useState } from "react";
+import { supabase } from "@/lib/supabase/browser";
 import { formatPaise } from "@/lib/money";
 import { PRODUCT_SELECT, effectivePrice, mainImage, type Category, type Product } from "@/lib/catalog";
-import { quickStock } from "../catalog-actions";
+import { useAsync, must } from "@/lib/useAsync";
+import { refreshStorefront } from "@/components/admin/team";
+import { Empty, ErrorBox, PageTitle, Spinner } from "@/components/admin/ui";
+import { Icon } from "@/components/Icon";
+import { useToast } from "@/components/Toast";
 
-const PAGE = 30;
+type Filter = "" | "low" | "out" | "hidden" | "featured" | "nophoto";
+const FILTERS: { key: Filter; label: string }[] = [
+  { key: "", label: "All" },
+  { key: "low", label: "Low stock" },
+  { key: "out", label: "Out of stock" },
+  { key: "nophoto", label: "No photo" },
+  { key: "hidden", label: "Hidden" },
+  { key: "featured", label: "Favourites" },
+];
 
-export default async function ProductsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ q?: string; cat?: string; filter?: string; page?: string; saved?: string; removed?: string; error?: string }>;
-}) {
-  const sp = await searchParams;
-  const q = (sp.q ?? "").trim().slice(0, 60);
-  const page = Math.max(1, Number(sp.page) || 1);
-  const supabase = await createClient();
-
-  const [{ data: cats }, { data: settings }] = await Promise.all([
-    supabase.from("categories").select("id, name, slug, sort_order, is_active, image_path").order("sort_order"),
-    supabase.from("store_settings").select("low_stock_threshold").eq("id", 1).single(),
-  ]);
-  const categories = (cats ?? []) as unknown as Category[];
-  const low = settings?.low_stock_threshold ?? 5;
-
-  let query = supabase
-    .from("products")
-    .select(PRODUCT_SELECT, { count: "exact" })
-    .order("name")
-    .range((page - 1) * PAGE, page * PAGE - 1);
-  if (q) {
-    const safe = q.replace(/[%_,()]/g, " ");
-    query = query.or(`name.ilike.%${safe}%,search_keywords.ilike.%${safe}%`);
+function StockInput({ id, value, low, onSaved }: { id: string; value: number; low: boolean; onSaved: (v: number) => void }) {
+  const toast = useToast();
+  const [v, setV] = useState(String(value));
+  const [saving, setSaving] = useState(false);
+  const dirty = v !== String(value);
+  async function save() {
+    const n = Number(v);
+    if (!Number.isInteger(n) || n < 0) return toast("Stock must be 0 or more", "error");
+    setSaving(true);
+    const { error } = await supabase().from("product_variants").update({ stock_qty: n }).eq("id", id);
+    setSaving(false);
+    if (error) return toast("Couldn't save stock", "error");
+    onSaved(n);
+    toast("Stock updated");
+    void refreshStorefront();
   }
-  if (sp.cat && /^[0-9a-f-]{36}$/i.test(sp.cat)) query = query.eq("category_id", sp.cat);
-  if (sp.filter === "hidden") query = query.eq("is_active", false);
-  if (sp.filter === "featured") query = query.eq("is_featured", true);
+  return (
+    <span className="flex items-center gap-1.5">
+      <input
+        type="number"
+        inputMode="numeric"
+        min={0}
+        value={v}
+        onChange={(e) => setV(e.target.value)}
+        onKeyDown={(e) => e.key === "Enter" && dirty && save()}
+        className={`h-10 w-16 rounded-lg border px-2 text-center text-[15px] font-bold ${low ? "border-rose-300 bg-rose-50 text-rose-800" : "border-line bg-white"}`}
+        aria-label="Stock"
+      />
+      {dirty && (
+        <button type="button" onClick={save} disabled={saving} className="h-10 rounded-lg bg-teal-600 px-3 text-[14px] font-bold text-white">
+          {saving ? "…" : "Save"}
+        </button>
+      )}
+    </span>
+  );
+}
 
-  const { data, count } = await query;
-  let products = (data ?? []) as unknown as Product[];
-  if (sp.filter === "low") {
-    products = products.filter((p) => p.product_variants.some((v) => v.is_active && v.stock_qty <= low));
-  }
-  const catName = new Map(categories.map((c) => [c.id, c.name]));
-  const returnTo = `/admin/products?${new URLSearchParams(
-    Object.entries({ q, cat: sp.cat ?? "", filter: sp.filter ?? "", page: String(page) }).filter(([, v]) => v),
-  ).toString()}`;
-  const pages = Math.max(1, Math.ceil((count ?? 0) / PAGE));
+function ProductsInner() {
+  const sp = useSearchParams();
+  const router = useRouter();
+  const filter = (sp.get("filter") ?? "") as Filter;
+  const cat = sp.get("cat") ?? "";
+  const [q, setQ] = useState("");
+
+  const { data, error, loading, reload, setData } = useAsync(async () => {
+    const sb = supabase();
+    const [p, c, s] = await Promise.all([
+      sb.from("products").select(`${PRODUCT_SELECT}, search_keywords`).order("name").limit(3000),
+      sb.from("categories").select("id, name, slug, sort_order, is_active, image_path").order("sort_order"),
+      sb.from("store_settings").select("low_stock_threshold").eq("id", 1).single(),
+    ]);
+    return {
+      products: must(p) as unknown as Product[],
+      categories: must(c) as unknown as Category[],
+      low: (s.data?.low_stock_threshold as number) ?? 5,
+    };
+  });
+
+  const list = useMemo(() => {
+    if (!data) return [];
+    const term = q.trim().toLowerCase();
+    return data.products.filter((p) => {
+      const vs = p.product_variants.filter((v) => v.is_active);
+      if (cat && p.category_id !== cat) return false;
+      if (term && !`${p.name} ${p.search_keywords ?? ""}`.toLowerCase().includes(term)) return false;
+      if (filter === "low") return vs.some((v) => v.stock_qty <= data.low);
+      if (filter === "out") return vs.length > 0 && vs.every((v) => v.stock_qty === 0);
+      if (filter === "hidden") return !p.is_active;
+      if (filter === "featured") return p.is_featured;
+      if (filter === "nophoto") return p.product_images.length === 0;
+      return true;
+    });
+  }, [data, q, cat, filter]);
+
+  const setParam = (k: string, v: string) => {
+    const p = new URLSearchParams(sp.toString());
+    if (v) p.set(k, v);
+    else p.delete(k);
+    router.replace(`/admin/products${p.size ? `?${p}` : ""}`);
+  };
+
+  const catName = new Map((data?.categories ?? []).map((c) => [c.id, c.name]));
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-2">
-        <h1 className="text-xl font-bold">Products {count != null && <span className="text-neutral-500">({count})</span>}</h1>
-        <Link className="btn-primary" href="/admin/products/new">+ Add product</Link>
-      </div>
-      <Notice ok={sp.saved ? "Saved." : sp.removed ? "Product deleted." : null} error={sp.error ?? null} />
+    <div>
+      <PageTitle
+        title="Products"
+        hue="products"
+        icon="box"
+        action={
+          <Link href="/admin/products/new" className="btn bg-teal-600 px-3 text-white">
+            <Icon name="plus" className="size-5" strokeWidth={2.6} /> Add
+          </Link>
+        }
+      />
 
-      {categories.length === 0 && (
-        <p className="card text-sm">
-          First <Link className="font-medium text-brand-700 underline" href="/admin/categories">add a category</Link>, then add products.
-        </p>
+      {data && data.categories.length === 0 && (
+        <div className="mb-4 rounded-2xl bg-fuchsia-50 p-4 text-fuchsia-900 ring-1 ring-fuchsia-200">
+          <p className="font-bold">Start with categories</p>
+          <p className="text-[15px]">Products sit inside categories like “Atta, Rice & Dal”.</p>
+          <Link href="/admin/categories" className="btn mt-3 bg-fuchsia-600 text-white">Add categories</Link>
+        </div>
       )}
 
-      <form className="card grid grid-cols-2 gap-2 sm:grid-cols-4" action="/admin/products">
-        <input className="field col-span-2" name="q" defaultValue={q} placeholder="Search products" />
-        <select className="field" name="cat" defaultValue={sp.cat ?? ""}>
-          <option value="">All categories</option>
-          {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
-        <select className="field" name="filter" defaultValue={sp.filter ?? ""}>
-          <option value="">All</option>
-          <option value="low">Low stock (≤{low}, this page)</option>
-          <option value="hidden">Hidden</option>
-          <option value="featured">Featured</option>
-        </select>
-        <button className="btn-ghost col-span-2 sm:col-span-4" type="submit">Filter</button>
-      </form>
-
-      <div className="space-y-3">
-        {products.length === 0 && <p className="card text-sm text-neutral-600">No products found.</p>}
-        {products.map((p) => {
-          const img = mainImage(p);
-          const variants = [...p.product_variants].sort((a, b) => a.sort_order - b.sort_order);
-          return (
-            <div key={p.id} className="card space-y-3">
-              <Link href={`/admin/products/${p.id}`} className="flex items-center gap-3">
-                <div className="size-14 shrink-0 overflow-hidden rounded-lg bg-neutral-100">
-                  {img ? <img src={img} alt="" className="size-full object-cover" loading="lazy" /> : null}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-semibold">{p.name}</p>
-                  <p className="text-xs text-neutral-500">
-                    {catName.get(p.category_id) ?? "—"}
-                    {!p.is_active && <span className="ml-2 rounded bg-neutral-200 px-1.5 text-neutral-700">Hidden</span>}
-                    {p.is_featured && <span className="ml-2 rounded bg-amber-100 px-1.5 text-amber-800">Featured</span>}
-                    {!img && <span className="ml-2 text-amber-700">No photo</span>}
-                  </p>
-                </div>
-                <span className="text-sm text-brand-700">Edit ›</span>
-              </Link>
-              {variants.map((v) => (
-                <form key={v.id} action={quickStock} className="flex items-center gap-2 text-sm">
-                  <input type="hidden" name="id" value={v.id} />
-                  <input type="hidden" name="return_to" value={returnTo} />
-                  <span className="w-24 shrink-0 truncate">{v.label}</span>
-                  <span className="w-16 shrink-0 font-medium">{formatPaise(effectivePrice(v))}</span>
-                  <input
-                    className={`field w-20 py-1.5 ${v.stock_qty <= low ? "border-amber-400 bg-amber-50" : ""}`}
-                    name="stock"
-                    type="number"
-                    inputMode="numeric"
-                    min={0}
-                    defaultValue={v.stock_qty}
-                    aria-label={`Stock for ${p.name} ${v.label}`}
-                  />
-                  <SubmitButton className="btn-ghost min-h-9 px-3" pendingText="…">Save</SubmitButton>
-                </form>
-              ))}
-            </div>
-          );
-        })}
+      <div className="relative mb-2">
+        <Icon name="search" className="pointer-events-none absolute left-3.5 top-1/2 size-5 -translate-y-1/2 text-muted" />
+        <input className="field pl-11" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search your products" type="search" />
       </div>
+      <div className="no-scrollbar -mx-4 mb-2 flex gap-2 overflow-x-auto px-4">
+        {FILTERS.map((f) => (
+          <button key={f.key} type="button" onClick={() => setParam("filter", f.key)} className={`shrink-0 rounded-full px-3.5 py-1.5 text-[14px] font-bold ring-1 ${f.key === filter ? "bg-teal-600 text-white ring-teal-600" : "bg-white ring-line"}`}>
+            {f.label}
+          </button>
+        ))}
+      </div>
+      {data && data.categories.length > 0 && (
+        <select className="field mb-4 py-2.5" value={cat} onChange={(e) => setParam("cat", e.target.value)} aria-label="Category">
+          <option value="">All categories</option>
+          {data.categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+      )}
 
-      {pages > 1 && (
-        <nav className="flex items-center justify-between text-sm">
-          {page > 1 ? (
-            <Link className="btn-ghost" href={returnTo.replace(/page=\d+/, `page=${page - 1}`)}>‹ Previous</Link>
-          ) : <span />}
-          <span>Page {page} of {pages}</span>
-          {page < pages ? (
-            <Link className="btn-ghost" href={returnTo.replace(/page=\d+/, `page=${page + 1}`)}>Next ›</Link>
-          ) : <span />}
-        </nav>
+      {loading && !data ? (
+        <Spinner />
+      ) : error ? (
+        <ErrorBox text={error} retry={reload} />
+      ) : list.length === 0 ? (
+        <Empty
+          icon="box"
+          title={data?.products.length ? "No products match" : "No products yet"}
+          text={data?.products.length ? "Clear the search or pick another filter." : "Add your first product. It takes a minute with a phone photo."}
+          action={!data?.products.length && <Link href="/admin/products/new" className="btn bg-teal-600 text-white">Add product</Link>}
+        />
+      ) : (
+        <>
+          <p className="mb-2 text-[14px] text-muted">{list.length} products</p>
+          <ul className="space-y-2">
+            {list.map((p) => {
+              const img = mainImage(p);
+              const vs = [...p.product_variants].sort((a, b) => a.sort_order - b.sort_order);
+              return (
+                <li key={p.id} className="rounded-2xl bg-white p-3 ring-1 ring-line">
+                  <Link href={`/admin/products/edit?id=${p.id}`} className="flex items-center gap-3">
+                    <span className="size-14 shrink-0 overflow-hidden rounded-xl bg-page">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      {img ? <img src={img} alt="" className="size-full object-contain" loading="lazy" /> : <span className="flex size-full items-center justify-center text-teal-700"><Icon name="camera" /></span>}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[15px] font-bold">{p.name}</span>
+                      <span className="flex flex-wrap gap-1.5 text-[12.5px]">
+                        <span className="text-muted">{catName.get(p.category_id) ?? ""}</span>
+                        {!p.is_active && <span className="rounded bg-slate-200 px-1.5 font-bold text-slate-700">Hidden</span>}
+                        {p.is_featured && <span className="rounded bg-haldi-100 px-1.5 font-bold text-haldi-700">Favourite</span>}
+                        {!img && <span className="rounded bg-teal-50 px-1.5 font-bold text-teal-800">Add photo</span>}
+                      </span>
+                    </span>
+                    <span className="flex items-center gap-1 rounded-lg bg-teal-50 px-2.5 py-1.5 text-[13px] font-bold text-teal-800">
+                      <Icon name="edit" className="size-4" /> Edit
+                    </span>
+                  </Link>
+                  <div className="mt-2 space-y-1.5 border-t border-line pt-2">
+                    {vs.map((v) => (
+                      <div key={v.id} className="flex items-center gap-2 text-[14px]">
+                        <span className={`min-w-0 flex-1 truncate ${v.is_active ? "" : "text-muted line-through"}`}>{v.label}</span>
+                        <span className="w-16 text-right font-bold">{formatPaise(effectivePrice(v))}</span>
+                        <StockInput
+                          id={v.id}
+                          value={v.stock_qty}
+                          low={v.stock_qty <= (data?.low ?? 5)}
+                          onSaved={(n) =>
+                            data &&
+                            setData({
+                              ...data,
+                              products: data.products.map((x) => (x.id === p.id ? { ...x, product_variants: x.product_variants.map((y) => (y.id === v.id ? { ...y, stock_qty: n } : y)) } : x)),
+                            })
+                          }
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </>
       )}
     </div>
+  );
+}
+
+export default function ProductsPage() {
+  return (
+    <Suspense fallback={<Spinner />}>
+      <ProductsInner />
+    </Suspense>
   );
 }
