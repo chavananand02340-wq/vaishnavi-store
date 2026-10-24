@@ -4,3 +4,7 @@
 
 [build.environment]
   NODE_VERSION = "22"
+
+# Runs the Next.js server parts (pages, login, server actions) as Netlify Functions.
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
