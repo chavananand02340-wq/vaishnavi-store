@@ -1,0 +1,60 @@
+
+> vaishnavi-store@0.1.0 build
+> next build
+
+⚠ No build cache found. Please configure build caching for faster rebuilds. Read more: https://nextjs.org/docs/messages/no-cache
+   ▲ Next.js 15.5.28
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 8.5s
+   Skipping linting
+   Checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/33) ...
+   Generating static pages (8/33) 
+   Generating static pages (16/33) 
+   Generating static pages (24/33) 
+ ✓ Generating static pages (33/33)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                 Size  First Load JS  Revalidate  Expire
+┌ ○ /                                    3.98 kB         184 kB          1m      1y
+├ ○ /_not-found                            138 B         103 kB
+├ ○ /admin                               7.13 kB         181 kB
+├ ○ /admin/banners                        2.4 kB         182 kB
+├ ○ /admin/categories                    2.94 kB         182 kB
+├ ○ /admin/order                         1.18 kB         182 kB
+├ ○ /admin/orders                        5.83 kB         180 kB
+├ ○ /admin/pincodes                      6.39 kB         180 kB
+├ ○ /admin/products                      7.69 kB         182 kB
+├ ○ /admin/products/edit                  5.7 kB         185 kB
+├ ○ /admin/products/new                  7.73 kB         182 kB
+├ ○ /admin/settings                      7.75 kB         182 kB
+├ ƒ /api/revalidate                        138 B         103 kB
+├ ● /c/[slug]                              290 B         112 kB          1m      1y
+├   ├ /c/atta-rice-dal                                                   1m      1y
+├   ├ /c/oil-ghee                                                        1m      1y
+├   ├ /c/masala-spices                                                   1m      1y
+├   └ [+5 more paths]
+├ ○ /cart                                3.72 kB         183 kB          1m      1y
+├ ○ /checkout                            7.35 kB         181 kB          1m      1y
+├ ○ /icon.png                                0 B            0 B
+├ ○ /login                               2.94 kB         173 kB
+├ ○ /manifest.webmanifest                  138 B         103 kB
+├ ○ /order                               16.2 kB         190 kB          1m      1y
+├ ● /p/[id]                              3.27 kB         115 kB
+├ ○ /robots.txt                            138 B         103 kB
+├ ○ /search                              2.21 kB         182 kB          1m      1y
+├ ○ /sitemap.xml                           138 B         103 kB          1h      1y
+└ ○ /staff                               3.46 kB         185 kB
++ First Load JS shared by all             103 kB
+  ├ chunks/255-b1e2483a7e02feee.js       46.6 kB
+  ├ chunks/4bd1b696-c023c6e3521b1417.js  54.2 kB
+  └ other shared chunks (total)          1.93 kB
+
+
+○  (Static)   prerendered as static content
+●  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ƒ  (Dynamic)  server-rendered on demand
+
