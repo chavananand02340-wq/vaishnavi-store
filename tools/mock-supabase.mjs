@@ -169,7 +169,7 @@ const server = http.createServer(async (req, res) => {
 
   // Images
   if (path.startsWith("/storage/v1/object/public/")) {
-    const id = path.split("/")[6];
+    const id = path.split("/")[7];
     const p = products.find((x) => x.id === id);
     res.writeHead(200, { "content-type": "image/svg+xml", "cache-control": "max-age=3600" });
     return res.end(svgFor(p?.name ?? "Item", p?.color ?? "#1e7a4c"));
@@ -219,7 +219,7 @@ const server = http.createServer(async (req, res) => {
       case "products": rows = products.map(({ color, ...p }) => (sel.includes("product_variants") ? p : { id: p.id, category_id: p.category_id, updated_at: iso(1) })); break;
       case "product_variants": rows = variants.map(({ product, ...v }) => v); break;
       case "delivery_pincodes": rows = [{ pincode: "442001", area_name: "Chandrapur city", is_active: true, fee_override_paise: null }, { pincode: "442401", area_name: "Durgapur", is_active: false, fee_override_paise: 5000 }]; break;
-      case "admin_users": rows = role ? [{ role, display_name: role === "owner" ? "Sangita" : "Counter", is_active: true }] : []; break;
+      case "admin_users": rows = role ? [{ user_id: role === "owner" ? "11111111-1111-4111-8111-111111111111" : "22222222-2222-4222-8222-222222222222", role, display_name: role === "owner" ? "Sangita" : "Counter", is_active: true }] : []; break;
       case "orders": rows = role ? orders : []; break;
       case "order_status_history": rows = [
         { id: 1, from_status: null, to_status: "new", note: "Order placed", created_at: iso(14) },

@@ -22,7 +22,7 @@ export function ProductDetail({ product, images, description }: { product: CardP
     <div className="pb-32">
       <div className="grid gap-5 md:grid-cols-2">
         <div>
-          <div className="relative aspect-square overflow-hidden rounded-[var(--radius-card)] bg-white ring-1 ring-line">
+          <div className="relative aspect-[4/3] overflow-hidden rounded-[var(--radius-card)] bg-white ring-1 ring-line md:aspect-square">
             <ProductImage src={images[shown] ?? null} alt={product.name} className="p-4" />
             {off >= 5 && <span className="absolute left-0 top-4 rounded-r-lg bg-kumkum-600 px-2.5 py-1 text-[14px] font-extrabold text-white">{off}% off</span>}
           </div>

@@ -61,7 +61,7 @@ export function CartButton() {
       aria-label={`Cart, ${count} items`}
     >
       <Icon name="cart" className="size-5" strokeWidth={2.2} />
-      <span className="min-w-4 text-center text-[15px]">{ready ? count : 0}</span>
+      {ready && count > 0 && <span className="min-w-4 text-center text-[15px]">{count}</span>}
     </Link>
   );
 }
@@ -102,9 +102,8 @@ export function StoreHeader({ compact = false }: { compact?: boolean }) {
         <div className="bg-haldi-500 text-leaf-900">
           <p className="mx-auto max-w-6xl px-4 py-2 text-[14px] font-semibold">
             {s.free_delivery_enabled
-              ? `Free delivery on orders of ${formatPaise(s.free_delivery_threshold_paise)} or more. Below that, ${formatPaise(s.delivery_fee_paise)}.`
-              : `Delivery charge ${formatPaise(s.delivery_fee_paise)}.`}
-            {s.cod_enabled ? " Cash on delivery, no minimum." : ""}
+              ? `Free delivery above ${formatPaise(s.free_delivery_threshold_paise)}${s.cod_enabled ? ", cash on delivery" : ""}`
+              : `Delivery ${formatPaise(s.delivery_fee_paise)}${s.cod_enabled ? ", cash on delivery" : ""}`}
           </p>
         </div>
       )}

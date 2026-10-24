@@ -129,7 +129,7 @@ export function ProductGrid({ products }: { products: CardProduct[] }) {
 
 export function ProductRow({ products }: { products: CardProduct[] }) {
   return (
-    <div className="no-scrollbar -mx-4 flex snap-x gap-2.5 overflow-x-auto px-4 pb-1">
+    <div className="no-scrollbar -mx-4 flex snap-x scroll-px-4 gap-2.5 overflow-x-auto px-4 pb-1">
       {products.map((p) => (
         <div key={p.id} className="snap-start">
           <ProductCard product={p} width="w-[148px] sm:w-[172px] h-full" />
