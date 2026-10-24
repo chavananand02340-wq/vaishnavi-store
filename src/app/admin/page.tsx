@@ -84,7 +84,7 @@ export default function Dashboard() {
           type="button"
           onClick={toggleOrders}
           disabled={switching}
-          className={`btn min-w-36 ${s.accepting_orders ? "bg-white text-rose-700 ring-1 ring-rose-200" : "bg-leaf-700 text-white"}`}
+          className={`btn w-full sm:w-auto sm:min-w-36 ${s.accepting_orders ? "bg-white text-rose-700 ring-1 ring-rose-200" : "bg-leaf-700 text-white"}`}
         >
           {switching ? "Saving…" : s.accepting_orders ? "Pause orders" : "Start orders"}
         </button>

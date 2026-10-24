@@ -22,6 +22,14 @@ All planned launch features are built. CI (GitHub Actions) builds the app, type-
 ### Later (only if needed)
 Web push to a locked phone (needs a service worker + VAPID keys), Cloudflare Turnstile if fake orders appear, reorder button, owner screen to add/remove staff logins (needs a server key), Marathi UI.
 
+## Speed
+
+Netlify's free plan runs server code in the US while the database is in Mumbai, so the app avoids server round trips: store pages are cached on the CDN (refreshed every 60 s and immediately via `/api/revalidate` when the owner saves), and cart, checkout, search, login and the whole owner/counter panel talk to Supabase directly from the phone. Row Level Security keeps that safe.
+
+## Design screenshots
+
+`.github/workflows/screenshots.yml` builds the app against `tools/mock-supabase.mjs` and pushes phone/laptop screenshots to the `screenshots` branch.
+
 ## Business rules (all editable in **Admin → Store & delivery**)
 
 - Store hours 10:00–22:00 IST + a manual "accepting orders" switch.
@@ -65,7 +73,7 @@ npm run typecheck
 
 ## Pages
 
-- Customers: `/`, `/c/[slug]`, `/search`, `/p/[id]`, `/cart`, `/checkout`, `/order/[token]`
+- Customers: `/`, `/c/[slug]`, `/search`, `/p/[id]`, `/cart`, `/checkout`, `/order?t=<token>`
 - `/login` — owner & counter login
 - `/staff` — live orders panel (owner and counter)
 - `/admin` — owner: dashboard, `orders`, `products`, `categories`, `settings`, `pincodes`

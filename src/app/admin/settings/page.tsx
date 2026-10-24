@@ -178,11 +178,13 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      <div className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-20 lg:bottom-4">
-        <button type="button" onClick={save} disabled={saving || !dirty} className="btn w-full bg-slate-800 text-[16px] text-white shadow-lg">
-          {saving ? "Saving…" : dirty ? "Save changes" : "All changes saved"}
-        </button>
-      </div>
+      {dirty && (
+        <div className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-20 lg:bottom-4">
+          <button type="button" onClick={save} disabled={saving} className="btn w-full bg-slate-800 text-[16px] text-white shadow-lg">
+            {saving ? "Saving…" : "Save changes"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

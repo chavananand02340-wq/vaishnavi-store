@@ -135,7 +135,7 @@ export function OrderCard({
                 type="button"
                 disabled={busy !== null}
                 onClick={() => call(`na-${i.id}`, "mark_item_unavailable", { p_order_id: o.id, p_item_id: i.id }, "Item removed, bill updated")}
-                className="shrink-0 rounded-lg border border-orange-300 bg-orange-50 px-2 py-1 text-[12.5px] font-bold text-orange-800"
+                className="shrink-0 rounded-lg border border-line bg-white px-2 py-1 text-[12px] font-semibold text-muted"
               >
                 {busy === `na-${i.id}` ? "…" : "Not available"}
               </button>
@@ -151,7 +151,7 @@ export function OrderCard({
         <p className="text-[16px] font-bold">{o.customer_name}</p>
         <p className="text-[15px] leading-snug text-ink/90">
           {o.address_line}
-          {o.landmark ? `, near ${o.landmark}` : ""}, {o.pincode}
+          {o.landmark ? ` (${o.landmark})` : ""}, {o.pincode}
         </p>
         {o.instructions && <p className="mt-2 rounded-lg bg-haldi-100 px-3 py-2 text-[14px] font-semibold text-haldi-700">Note: {o.instructions}</p>}
         <div className="mt-3 grid grid-cols-3 gap-2">
