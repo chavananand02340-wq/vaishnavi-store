@@ -34,7 +34,9 @@ jobs:
       - name: Start mock database
         run: node tools/mock-supabase.mjs > mock.log 2>&1 &
       - name: Build
-        run: npm run build
+        id: build
+        shell: bash
+        run: set -o pipefail; mkdir -p shots; npm run build 2>&1 | tee shots/build.log
       - name: Start app
         run: |
           npx next start -p 3000 > app.log 2>&1 &
@@ -42,7 +44,9 @@ jobs:
       - name: Take screenshots
         run: node tools/screenshots.mjs
       - name: Save to screenshots branch
+        if: always()
         run: |
+          mkdir -p shots
           cp app.log mock.log shots/ || true
           cd shots
           git init -q -b screenshots
