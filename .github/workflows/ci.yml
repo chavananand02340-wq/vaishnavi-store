@@ -59,5 +59,8 @@ jobs:
       - name: Apply migrations and run SQL tests
         run: |
           psql -v ON_ERROR_STOP=1 -q -f supabase/tests/supabase_stubs.sql
-          for f in supabase/migrations/*.sql; do psql -v ON_ERROR_STOP=1 -q -f "$f"; done
+          # Run every setup part twice: proves each part is safe to re-run.
+          for pass in 1 2; do
+            for f in supabase/setup/*.sql; do psql -v ON_ERROR_STOP=1 -q -f "$f"; done
+          done
           psql -v ON_ERROR_STOP=1 -q -f supabase/tests/checkout_test.sql

@@ -1,5 +1,5 @@
 -- Database tests for pricing, checkout and permissions. Run on a throwaway
--- database after supabase_stubs.sql + migrations (CI does this). Each check
+-- database after supabase_stubs.sql + supabase/setup/*.sql (CI does this). Each check
 -- raises an exception on failure.
 
 create or replace function pg_temp.check(cond boolean, what text) returns void language plpgsql as $$

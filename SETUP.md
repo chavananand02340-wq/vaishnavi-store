@@ -12,20 +12,17 @@ Total time: ~45 minutes. Kuch bhi password ya secret key chat mein paste mat kar
    - Region: **South Asia (Mumbai)**
 2. Project ready hone tak 2 minute wait karo.
 
-## Step 2 — SQL chalana (10 min)
+## Step 2 — SQL chalana (15 chhote parts)
 
-Supabase → left menu **SQL Editor** → **New query**. Har file ka poora content copy karke paste karo → **Run**. Order yahi rakhna:
+Supabase → left menu **SQL Editor** → **New query**. Repo ke `supabase/setup/` folder mein 15 files hain (`01_basics.sql` … `15_permissions.sql`). Har file ke liye:
 
-| # | File (GitHub repo mein) | Run ke baad kya dikhega |
-|---|---|---|
-| 1 | `supabase/migrations/20261023000001_init.sql` | "Success. No rows returned" |
-| 2 | `supabase/migrations/20261023000002_storage_realtime.sql` | "Success" |
-| 3 | `supabase/migrations/20261023000003_orders_and_search.sql` | "Success" |
-| 4 | `supabase/migrations/20261023000004_explicit_grants.sql` | "Success" |
+1. File ka poora content copy karo → editor mein paste karo → **Run**
+2. Neeche **"Success. No rows returned"** aana chahiye
+3. Editor saaf karo (Ctrl+A → Delete), phir agla part
+
+Order **01 → 15** hi rakhna. Koi part fail ho jaye toh error ka text bhejo. Har part dobara chalana safe hai.
 
 > ⚠️ `supabase/tests/` wali files **Supabase par kabhi mat chalana** — woh sirf GitHub testing ke liye hain.
-
-Koi error aaye toh error ka screenshot/text bhejo, aage mat badhna.
 
 ## Step 3 — Logins banana (5 min)
 

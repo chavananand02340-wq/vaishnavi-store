@@ -43,7 +43,7 @@ Web push to a locked phone (needs a service worker + VAPID keys), Cloudflare Tur
 
 ### 1. Supabase
 1. Create a project at supabase.com (region **Mumbai / ap-south-1**), using the store's Gmail.
-2. **SQL Editor** → run the four files in `supabase/migrations/` in order (0001 → 0004). Never run `supabase/tests/` on Supabase.
+2. **SQL Editor** → run the 15 files in `supabase/setup/` in order (01 → 15). Each part is safe to re-run. Never run `supabase/tests/` on Supabase.
 3. **Authentication → Sign In / Providers → Email:** turn **off** "Allow new users to sign up".
 4. **Authentication → Users → Add user** twice (owner email, counter email), with strong passwords and "Auto confirm".
 5. **SQL Editor** → edit and run `supabase/setup_team.sql`.
@@ -77,4 +77,4 @@ The Supabase free plan has no automatic backups. `.github/workflows/backup.yml` 
 ## Tests
 
 - `npm test` — delivery-fee rule unit tests
-- `supabase/tests/checkout_test.sql` — run on a throwaway Postgres after `supabase_stubs.sql` + migrations (CI does this). **Never run on the real project.**
+- `supabase/tests/checkout_test.sql` — run on a throwaway Postgres after `supabase_stubs.sql` + `supabase/setup/*.sql` (CI does this). **Never run on the real project.**
