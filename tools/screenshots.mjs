@@ -69,6 +69,7 @@ if (edit) await shoot(owner, "a05-product-edit", edit, { wait: 1500 });
 await shoot(owner, "a06-categories", "/admin/categories");
 await shoot(owner, "a07-settings", "/admin/settings");
 await shoot(owner, "a08-pincodes", "/admin/pincodes");
+await shoot(owner, "a11-banners", "/admin/banners");
 await shoot(owner, "a09-orders", "/admin/orders?range=all");
 const more = await shoot(owner, "a10-more-menu", "/admin", { full: false });
 await more.locator("button:has-text('More')").click().catch(() => {});

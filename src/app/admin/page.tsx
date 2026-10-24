@@ -104,6 +104,7 @@ export default function Dashboard() {
           <Tile href="/admin/categories" hue="categories" icon="tag" title="Categories" note="Shelves on the website" />
           <Tile href="/admin/settings" hue="settings" icon="settings" title="Timing & delivery" note={`₹${s.delivery_fee_paise / 100} fee, ${s.default_eta_minutes} min`} />
           <Tile href="/admin/pincodes" hue="pincodes" icon="pin" title="PIN codes" note="Where you deliver" />
+          <Tile href="/admin/banners" hue="banners" icon="gift" title="Home banners" note="Offers on the home page" />
         </div>
       </section>
 

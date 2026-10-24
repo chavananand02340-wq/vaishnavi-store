@@ -89,7 +89,7 @@ function Edit() {
   useEffect(() => {
     const p = data?.product;
     if (p && p.id === id && p.id !== dFor) {
-      setD({ name: p.name, category_id: p.category_id, search_keywords: p.search_keywords ?? "", description: p.description ?? "", is_active: p.is_active, is_featured: p.is_featured });
+      setD({ name: p.name, name_local: p.name_local ?? "", category_id: p.category_id, search_keywords: p.search_keywords ?? "", description: p.description ?? "", is_active: p.is_active, is_featured: p.is_featured });
       setDFor(p.id);
     }
   }, [data, dFor, id]);
@@ -108,7 +108,7 @@ function Edit() {
     setBusy("details");
     const { error: e } = await supabase()
       .from("products")
-      .update({ name: d.name.trim(), category_id: d.category_id, search_keywords: d.search_keywords.trim() || null, description: d.description.trim() || null, is_active: d.is_active, is_featured: d.is_featured })
+      .update({ name: d.name.trim(), name_local: d.name_local.trim() || null, category_id: d.category_id, search_keywords: d.search_keywords.trim() || null, description: d.description.trim() || null, is_active: d.is_active, is_featured: d.is_featured })
       .eq("id", id);
     setBusy(null);
     if (e) return toast("Couldn't save details", "error");
@@ -157,7 +157,7 @@ function Edit() {
     const sb = supabase();
     const ins = await sb
       .from("products")
-      .insert({ name: `${p.name} (copy)`.slice(0, 120), category_id: p.category_id, description: p.description, search_keywords: p.search_keywords, is_active: false, is_featured: false })
+      .insert({ name: `${p.name} (copy)`.slice(0, 120), name_local: p.name_local ?? null, category_id: p.category_id, description: p.description, search_keywords: p.search_keywords, is_active: false, is_featured: false })
       .select("id")
       .single();
     if (ins.data) {

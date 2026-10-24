@@ -15,6 +15,7 @@ export const HUE = {
   categories: { solid: "bg-fuchsia-600 text-white", soft: "bg-fuchsia-50 text-fuchsia-900", ring: "ring-fuchsia-200", text: "text-fuchsia-700" },
   pincodes: { solid: "bg-sky-600 text-white", soft: "bg-sky-50 text-sky-900", ring: "ring-sky-200", text: "text-sky-700" },
   settings: { solid: "bg-slate-700 text-white", soft: "bg-slate-100 text-slate-900", ring: "ring-slate-200", text: "text-slate-700" },
+  banners: { solid: "bg-orange-500 text-white", soft: "bg-orange-50 text-orange-900", ring: "ring-orange-200", text: "text-orange-700" },
   danger: { solid: "bg-rose-600 text-white", soft: "bg-rose-50 text-rose-900", ring: "ring-rose-200", text: "text-rose-700" },
 } as const;
 export type Hue = keyof typeof HUE;

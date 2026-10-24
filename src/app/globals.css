@@ -8,14 +8,14 @@
   page  = cool sage-tinted background so white cards lift off it
 */
 @theme {
-  --color-leaf-50: #eaf4ee;
-  --color-leaf-100: #d3e8db;
-  --color-leaf-200: #a9d1b8;
-  --color-leaf-500: #1e7a4c;
-  --color-leaf-600: #146b3f;
-  --color-leaf-700: #0f5132;
-  --color-leaf-800: #0b3d26;
-  --color-leaf-900: #082a1b;
+  --color-leaf-50: #e8f6ee;
+  --color-leaf-100: #cdebd9;
+  --color-leaf-200: #9bd7b5;
+  --color-leaf-500: #1aa75e;
+  --color-leaf-600: #12924f;
+  --color-leaf-700: #0d7a41;
+  --color-leaf-800: #095c31;
+  --color-leaf-900: #063d21;
 
   --color-haldi-100: #fff4cc;
   --color-haldi-300: #ffd95a;
@@ -23,10 +23,10 @@
   --color-haldi-500: #f2b705;
   --color-haldi-700: #8a6400;
 
-  --color-kumkum-50: #fdecea;
-  --color-kumkum-600: #b42318;
+  --color-kumkum-50: #fdeaea;
+  --color-kumkum-600: #d92d20;
 
-  --color-page: #f2f5f0;
+  --color-page: #f5f7f2;
   --color-ink: #18241d;
   --color-muted: #5b6b61;
   --color-line: #dfe6e0;
@@ -98,6 +98,14 @@ body {
   &::-webkit-scrollbar {
     display: none;
   }
+}
+
+@keyframes slide-in {
+  from { opacity: 0; transform: translateX(12px); }
+  to { opacity: 1; transform: none; }
+}
+.animate-slide {
+  animation: slide-in 380ms ease-out;
 }
 
 @keyframes pop {

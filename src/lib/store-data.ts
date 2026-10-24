@@ -1,6 +1,6 @@
 import { cache } from "react";
 import { publicSupabase } from "@/lib/supabase/public";
-import { PRODUCT_SELECT, type Category, type Product } from "@/lib/catalog";
+import { PRODUCT_SELECT, imageUrl, type Category, type Product } from "@/lib/catalog";
 import { inStock, toCard, type CardProduct } from "@/lib/cards";
 
 export type { CardProduct, CardVariant } from "@/lib/cards";
@@ -78,4 +78,15 @@ export const getProduct = cache(async (id: string): Promise<Product | null> => {
     .eq("is_active", true)
     .maybeSingle();
   return (data as unknown as Product) ?? null;
+});
+
+export type Banner = { id: string; image: string; link: string | null; alt: string | null };
+
+export const getBanners = cache(async (): Promise<Banner[]> => {
+  const sb = publicSupabase();
+  if (!sb) return [];
+  const { data } = await sb.from("banners").select("id, image_path, link_url, alt_text").eq("is_active", true).order("sort_order").limit(8);
+  return ((data ?? []) as { id: string; image_path: string; link_url: string | null; alt_text: string | null }[])
+    .map((b) => ({ id: b.id, image: imageUrl(b.image_path) ?? "", link: b.link_url, alt: b.alt_text }))
+    .filter((b) => b.image);
 });

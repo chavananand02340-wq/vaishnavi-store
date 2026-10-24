@@ -22,7 +22,7 @@ function NewProduct() {
     const r = await supabase().from("categories").select("id, name, slug, sort_order, is_active, image_path").order("sort_order");
     return must(r) as unknown as Category[];
   });
-  const fresh = (): DetailsForm => ({ name: "", category_id: sp.get("cat") ?? "", search_keywords: "", description: "", is_active: true, is_featured: false });
+  const fresh = (): DetailsForm => ({ name: "", name_local: "", category_id: sp.get("cat") ?? "", search_keywords: "", description: "", is_active: true, is_featured: false });
   const [d, setD] = useState<DetailsForm>(fresh);
   const [v, setV] = useState<VariantForm>(EMPTY_VARIANT);
   const [saving, setSaving] = useState(false);
@@ -39,6 +39,7 @@ function NewProduct() {
       .from("products")
       .insert({
         name: d.name.trim(),
+        name_local: d.name_local.trim() || null,
         category_id: d.category_id,
         search_keywords: d.search_keywords.trim() || null,
         description: d.description.trim() || null,

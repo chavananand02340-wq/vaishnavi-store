@@ -52,7 +52,7 @@ const P = [
 const products = P.map(([cat, name, sizes, color, featured], i) => {
   const id = uuid(`p${i}`);
   return {
-    id, name, description: i === 0 ? "Stone-ground whole wheat atta for soft rotis. Packed fresh." : null, search_keywords: i === 5 ? "tel, refined" : i === 6 ? "tup" : null,
+    id, name, name_local: ["गव्हाचे पीठ", "तूर डाळ", "बासमती तांदूळ", "पोहे", null, "सूर्यफूल तेल", "गाईचे तूप"][i] ?? null, description: i === 0 ? "Stone-ground whole wheat atta for soft rotis. Packed fresh." : null, search_keywords: i === 5 ? "tel, refined" : i === 6 ? "tup" : null,
     category_id: uuid(cat), is_active: true, is_featured: featured, color,
     product_variants: sizes.map(([label, price, mrp, stock], k) => ({
       id: uuid(`v${i}x${k}`), label, price_paise: price * 100, mrp_paise: mrp > price ? mrp * 100 : null,
@@ -226,6 +226,7 @@ const server = http.createServer(async (req, res) => {
         { id: 2, from_status: "new", to_status: "confirmed", note: null, created_at: iso(11) },
         { id: 3, from_status: "confirmed", to_status: "confirmed", note: "Item unavailable: Masala Banana Chips (150 g) x1", created_at: iso(9) },
       ]; break;
+      case "banners": rows = []; break;
       default: rows = [];
     }
     rows = filterRows(rows, [...url.searchParams.entries()].filter(([k]) => !(table === "products" && k === "is_active")));

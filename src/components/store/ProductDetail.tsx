@@ -47,6 +47,7 @@ export function ProductDetail({ product, images, description }: { product: CardP
         <div className="space-y-5">
           <div>
             <h1 className="font-display text-[26px] font-bold leading-tight">{product.name}</h1>
+            {product.nameLocal && <p className="text-[17px] text-muted">{product.nameLocal}</p>}
             <p className="mt-2 flex items-baseline gap-2">
               <span className="text-[26px] font-extrabold">{formatPaise(v.price)}</span>
               {v.compare && <span className="text-[16px] text-muted line-through">{formatPaise(v.compare)}</span>}

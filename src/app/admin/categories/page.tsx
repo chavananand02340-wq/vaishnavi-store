@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { supabase } from "@/lib/supabase/browser";
-import { slugify, type Category } from "@/lib/catalog";
+import { IMAGE_BUCKET, imageUrl, slugify, type Category } from "@/lib/catalog";
+import { shrinkImage } from "@/lib/image";
 import { useAsync, must } from "@/lib/useAsync";
 import { refreshStorefront } from "@/components/admin/team";
 import { Card, Empty, ErrorBox, PageTitle, Spinner, Switch } from "@/components/admin/ui";
@@ -11,6 +12,54 @@ import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/Toast";
 
 const STARTERS = ["Atta, Rice & Dal", "Oil & Ghee", "Masala & Spices", "Snacks & Biscuits", "Tea, Coffee & Drinks", "Dairy & Breakfast", "Personal Care", "Cleaning & Household"];
+
+function CategoryPhoto({ c, onChanged }: { c: Category; onChanged: () => void }) {
+  const toast = useToast();
+  const input = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const url = imageUrl(c.image_path);
+
+  async function upload(files: FileList | null) {
+    const file = files?.[0];
+    if (!file) return;
+    setBusy(true);
+    try {
+      const sb = supabase();
+      const { blob, ext } = await shrinkImage(file, 800);
+      const path = `categories/${c.id}/${crypto.randomUUID()}.${ext}`;
+      const up = await sb.storage.from(IMAGE_BUCKET).upload(path, blob, { contentType: blob.type, cacheControl: "31536000" });
+      if (up.error) throw new Error(up.error.message);
+      const { error } = await sb.from("categories").update({ image_path: path }).eq("id", c.id);
+      if (error) throw new Error(error.message);
+      if (c.image_path) await sb.storage.from(IMAGE_BUCKET).remove([c.image_path]);
+      toast("Category photo saved");
+      void refreshStorefront();
+      onChanged();
+    } catch (e) {
+      toast(e instanceof Error ? `Upload failed: ${e.message}` : "Upload failed", "error");
+    } finally {
+      setBusy(false);
+      if (input.current) input.current.value = "";
+    }
+  }
+
+  return (
+    <>
+      <input ref={input} type="file" accept="image/*" className="hidden" onChange={(e) => upload(e.target.files)} />
+      <button
+        type="button"
+        onClick={() => input.current?.click()}
+        disabled={busy}
+        className="relative size-14 shrink-0 overflow-hidden rounded-xl bg-fuchsia-50 text-fuchsia-700 ring-1 ring-fuchsia-200"
+        aria-label={url ? `Change photo for ${c.name}` : `Add photo for ${c.name}`}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        {url ? <img src={url} alt="" className="size-full object-contain" /> : <Icon name="camera" className="mx-auto size-6" />}
+        {busy && <span className="absolute inset-0 flex items-center justify-center bg-white/80 text-[11px] font-bold">…</span>}
+      </button>
+    </>
+  );
+}
 
 export default function CategoriesPage() {
   const toast = useToast();
@@ -122,7 +171,7 @@ export default function CategoriesPage() {
         <Empty icon="tag" title="No categories yet" text="Categories are the shelves customers browse." />
       ) : (
         <>
-          <p className="text-[14px] text-muted">The order here is the order on the website.</p>
+          <p className="text-[14px] text-muted">The order here is the order on the website. Tap the photo box to add a category picture.</p>
           <ul className="space-y-2">
             {cats.map((c, i) => {
               const n = data?.count.get(c.id) ?? 0;
@@ -137,6 +186,7 @@ export default function CategoriesPage() {
                         <Icon name="right" className="size-4 rotate-90" strokeWidth={2.6} />
                       </button>
                     </div>
+                    <CategoryPhoto c={c} onChanged={reload} />
                     {editing === c.id ? (
                       <form
                         className="flex flex-1 gap-2"

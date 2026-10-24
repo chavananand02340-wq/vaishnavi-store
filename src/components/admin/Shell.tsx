@@ -16,6 +16,7 @@ const OWNER_NAV: Item[] = [
   { href: "/admin/products", label: "Products", icon: "box", hue: "products", tab: true },
   { href: "/admin/orders", label: "All orders", icon: "orders", hue: "orders", tab: true },
   { href: "/admin/categories", label: "Categories", icon: "tag", hue: "categories" },
+  { href: "/admin/banners", label: "Banners", icon: "gift", hue: "banners" },
   { href: "/admin/pincodes", label: "PIN codes", icon: "pin", hue: "pincodes" },
   { href: "/admin/settings", label: "Shop settings", icon: "settings", hue: "settings" },
 ];
@@ -160,7 +161,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <button type="button" className="absolute inset-0 bg-black/40" aria-label="Close" onClick={() => setMore(false)} />
           <div className="animate-pop absolute inset-x-0 bottom-0 rounded-t-3xl bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
             <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-line" />
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-4 gap-2">
               {extra.map((n) => (
                 <Link key={n.href} href={n.href} className={`flex flex-col items-center gap-2 rounded-2xl p-3 text-center ring-1 ${HUE[n.hue].soft} ${HUE[n.hue].ring}`}>
                   <span className={`flex size-11 items-center justify-center rounded-xl ${HUE[n.hue].solid}`}>

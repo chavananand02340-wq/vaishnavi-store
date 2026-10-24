@@ -79,13 +79,14 @@ export function ProductCard({ product, width }: { product: CardProduct; width?: 
       <Link href={`/p/${product.id}`} className="relative block aspect-square overflow-hidden rounded-[10px] bg-[#f6f8f5]">
         <ProductImage src={product.image} alt={product.name} className="p-1.5" />
         {off >= 5 && (
-          <span className="absolute left-0 top-2 rounded-r-md bg-kumkum-600 px-1.5 py-0.5 text-[11px] font-extrabold text-white">{off}% off</span>
+          <span className="absolute left-1.5 top-1.5 rounded-full bg-kumkum-600 px-2 py-0.5 text-[11.5px] font-extrabold text-white shadow-sm">{off}% OFF</span>
         )}
       </Link>
 
       <div className="flex flex-1 flex-col px-1 pt-2">
-        <Link href={`/p/${product.id}`} className="line-clamp-2 min-h-[2.6em] text-[14px] font-semibold leading-[1.3]">
-          {product.name}
+        <Link href={`/p/${product.id}`} className="min-h-[2.6em]">
+          <span className="line-clamp-2 text-[14px] font-semibold leading-[1.3]">{product.name}</span>
+          {product.nameLocal && <span className="line-clamp-1 text-[12.5px] leading-tight text-muted">{product.nameLocal}</span>}
         </Link>
         {product.variants.length > 1 ? (
           <div className="no-scrollbar -mx-1 mt-1.5 flex gap-1 overflow-x-auto px-1">

@@ -3,7 +3,7 @@
 import type { Category } from "@/lib/catalog";
 import { Switch } from "./ui";
 
-export type DetailsForm = { name: string; category_id: string; search_keywords: string; description: string; is_active: boolean; is_featured: boolean };
+export type DetailsForm = { name: string; name_local: string; category_id: string; search_keywords: string; description: string; is_active: boolean; is_featured: boolean };
 
 export function ProductDetailsForm({ v, onChange, categories }: { v: DetailsForm; onChange: (v: DetailsForm) => void; categories: Category[] }) {
   const set = (k: keyof DetailsForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => onChange({ ...v, [k]: e.target.value });
@@ -12,6 +12,11 @@ export function ProductDetailsForm({ v, onChange, categories }: { v: DetailsForm
       <div>
         <label className="label" htmlFor="p-name">Product name</label>
         <input id="p-name" className="field" value={v.name} onChange={set("name")} placeholder="Aashirvaad Whole Wheat Atta" maxLength={120} />
+      </div>
+      <div>
+        <label className="label" htmlFor="p-local">Name in Marathi or Hindi (optional)</label>
+        <input id="p-local" className="field" value={v.name_local} onChange={set("name_local")} placeholder="गव्हाचे पीठ" maxLength={120} />
+        <p className="hint">Shown under the English name, and customers can search with it.</p>
       </div>
       <div>
         <label className="label" htmlFor="p-cat">Category</label>

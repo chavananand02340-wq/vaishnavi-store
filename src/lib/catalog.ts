@@ -17,6 +17,7 @@ export type ProductImage = { id?: string; storage_path: string; sort_order: numb
 export type Product = {
   id: string;
   name: string;
+  name_local?: string | null;
   description: string | null;
   search_keywords?: string | null;
   category_id: string;
@@ -36,7 +37,7 @@ export type Category = {
 };
 
 export const PRODUCT_SELECT =
-  "id, name, description, category_id, is_active, is_featured, product_variants(id, label, price_paise, mrp_paise, sale_price_paise, sale_ends_at, stock_qty, is_active, sort_order), product_images(id, storage_path, sort_order)";
+  "id, name, name_local, description, category_id, is_active, is_featured, product_variants(id, label, price_paise, mrp_paise, sale_price_paise, sale_ends_at, stock_qty, is_active, sort_order), product_images(id, storage_path, sort_order)";
 
 export const IMAGE_BUCKET = "product-images";
 
