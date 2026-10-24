@@ -83,7 +83,7 @@ export default async function Home() {
                     style={{ background: TINTS[i % TINTS.length] }}
                   >
                     <span className="relative z-10 line-clamp-2 text-[14px] font-extrabold leading-tight text-ink">{c.name}</span>
-                    {n > 0 && <span className="relative z-10 text-[12px] font-semibold text-ink/60">{n} items</span>}
+                    {n > 0 && <span className="relative z-10 text-[12px] font-semibold text-ink/60">{n} item{n === 1 ? "" : "s"}</span>}
                     <span className="absolute inset-x-1 bottom-1 top-[38%] flex items-end justify-center">
                       {img ? (
                         // eslint-disable-next-line @next/next/no-img-element
