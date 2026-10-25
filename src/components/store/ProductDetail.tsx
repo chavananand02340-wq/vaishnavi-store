@@ -76,7 +76,7 @@ export function ProductDetail({ product, images, description }: { product: CardP
 
           {bulk && (
             <a href={bulk} rel="noopener" className="flex items-center gap-3 rounded-xl bg-white p-3 text-[15px] ring-1 ring-line">
-              <WaIcon className="size-5 shrink-0 text-[#128c4a]" />
+              <WaIcon tone="green" className="size-6" />
               <span className="flex-1">Need more than 20, or a loose quantity? <b className="text-brand-700">Ask on WhatsApp</b></span>
             </a>
           )}

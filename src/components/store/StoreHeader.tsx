@@ -91,13 +91,31 @@ export function StoreHeader({ compact = false }: { compact?: boolean }) {
         </div>
       </div>
       {s && !compact && (
-        <div className="bg-haldi-500 text-ink">
-          <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-2 text-[13.5px] font-bold">
-            <span className="flex items-center gap-1.5">
-              <span className={`size-2 rounded-full ${open === false ? "bg-brand-600" : "bg-emerald-600"}`} aria-hidden />
-              {open === false ? `Closed, opens ${formatTime(s.open_time)}` : `Open till ${formatTime(s.close_time)}, ${s.default_eta_minutes} min delivery`}
-            </span>
-            {s.free_delivery_enabled && <span className="shrink-0">Free delivery {formatPaise(s.free_delivery_threshold_paise)}+</span>}
+        <div className="overflow-hidden bg-haldi-500 text-ink" aria-label="Shop information">
+          <div className="ticker flex w-max py-2 text-[13.5px] font-bold">
+            {[0, 1].map((copy) => (
+              <ul key={copy} className="flex shrink-0 items-center" aria-hidden={copy === 1 || undefined}>
+                {[
+                  <span key="o" className="flex items-center gap-1.5">
+                    <span className={`size-2 rounded-full ${open === false ? "bg-brand-600" : "bg-emerald-600"}`} aria-hidden />
+                    {open === false ? `Closed, opens ${formatTime(s.open_time)}` : `Open till ${formatTime(s.close_time)}`}
+                  </span>,
+                  `${s.default_eta_minutes} min delivery`,
+                  s.free_delivery_enabled ? `Free delivery on ${formatPaise(s.free_delivery_threshold_paise)}+` : null,
+                  s.cod_enabled ? "Cash on delivery available" : null,
+                  s.sale_enabled && s.sale_title ? `${s.sale_title}${s.sale_percent ? `: up to ${s.sale_percent}% off` : ""}${s.sale_coupon_code ? `, code ${s.sale_coupon_code}` : ""}` : null,
+                  s.announcement && open !== false ? s.announcement : null,
+                  "Order on WhatsApp too",
+                ]
+                  .filter(Boolean)
+                  .map((item, k) => (
+                    <li key={k} className="flex shrink-0 items-center whitespace-nowrap">
+                      <span className="px-4">{item}</span>
+                      <span className="text-[10px] text-ink/50" aria-hidden>●</span>
+                    </li>
+                  ))}
+              </ul>
+            ))}
           </div>
         </div>
       )}
@@ -108,7 +126,7 @@ export function StoreHeader({ compact = false }: { compact?: boolean }) {
           </p>
         </div>
       )}
-      {s?.announcement && open !== false && (
+      {s?.announcement && open !== false && compact && (
         <div className="border-b border-line bg-white">
           <p className="mx-auto max-w-6xl px-4 py-2 text-[14px] text-brand-800">{s.announcement}</p>
         </div>

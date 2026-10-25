@@ -1,16 +1,7 @@
-import { Icon } from "@/components/Icon";
-
-/**
- * The WhatsApp mark used on every "WhatsApp us" button.
- * To use WhatsApp's official icon, put the file from WhatsApp's brand
- * resources at public/brand/whatsapp.svg and set USE_OFFICIAL to true.
- */
-const USE_OFFICIAL = false;
-
-export function WaIcon({ className = "size-5" }: { className?: string }) {
-  if (USE_OFFICIAL) {
+/** WhatsApp mark used on every "WhatsApp us" button. Use tone="white" on green buttons. */
+export function WaIcon({ className = "size-5", tone = "white" }: { className?: string; tone?: "white" | "green" }) {
+  return (
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src="/brand/whatsapp.svg" alt="" aria-hidden className={className} />;
-  }
-  return <Icon name="chat" className={className} strokeWidth={2.4} />;
+    <img src={tone === "green" ? "/brand/whatsapp.png" : "/brand/whatsapp-white.png"} alt="" aria-hidden width={256} height={256} className={`shrink-0 ${className}`} />
+  );
 }

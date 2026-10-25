@@ -20,7 +20,7 @@ export function HeroSlider({ banners, productImages }: { banners: Banner[]; prod
   const { settings: s } = useCart();
   const track = useRef<HTMLDivElement>(null);
   const [index, setIndex] = useState(0);
-  const paused = useRef(false);
+  const paused = useRef(0);
 
   const imgs = (k: number) => productImages.slice(k * 3, k * 3 + 3).concat(productImages).slice(0, 3);
   const wa = waLink(s?.whatsapp_number, "Hello! Here is my grocery list:\n");
@@ -50,17 +50,19 @@ export function HeroSlider({ banners, productImages }: { banners: Banner[]; prod
           : []),
       ];
 
-  // Gentle auto-advance; stops while the person is touching it.
+  // Auto-advance every 4 s; waits a few seconds after the person touches it.
   useEffect(() => {
-    if (slides.length < 2 || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (slides.length < 2) return;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const t = setInterval(() => {
       const el = track.current;
-      if (!el || paused.current || document.visibilityState !== "visible") return;
+      if (!el || Date.now() < paused.current || document.visibilityState !== "visible") return;
       const next = (Math.round(el.scrollLeft / el.clientWidth) + 1) % slides.length;
-      el.scrollTo({ left: next * el.clientWidth, behavior: "smooth" });
-    }, 5000);
+      el.scrollTo({ left: next * el.clientWidth, behavior: reduce ? "auto" : "smooth" });
+    }, 4000);
     return () => clearInterval(t);
   }, [slides.length]);
+  const hold = () => (paused.current = Date.now() + 6000);
 
   return (
     <section aria-label="Offers" className="relative">
@@ -68,8 +70,9 @@ export function HeroSlider({ banners, productImages }: { banners: Banner[]; prod
         ref={track}
         className="no-scrollbar flex snap-x snap-mandatory overflow-x-auto rounded-[20px]"
         onScroll={(e) => setIndex(Math.round(e.currentTarget.scrollLeft / e.currentTarget.clientWidth))}
-        onPointerDown={() => (paused.current = true)}
-        onPointerUp={() => setTimeout(() => (paused.current = false), 4000)}
+        onPointerDown={hold}
+        onTouchStart={hold}
+        onWheel={hold}
       >
         {slides.map((sl, i) => (
           <div key={sl.id} className="w-full shrink-0 snap-center" aria-roledescription="slide" aria-label={`${i + 1} of ${slides.length}`}>

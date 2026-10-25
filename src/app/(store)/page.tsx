@@ -75,25 +75,31 @@ export default async function Home() {
           ) : (
             <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-5 lg:grid-cols-6">
               {categories.map((c, i) => {
-                const img = imageUrl(c.image_path) ?? byCat.get(c.id)?.find((p) => p.image)?.image ?? null;
+                const own = imageUrl(c.image_path);
+                const img = own ?? byCat.get(c.id)?.find((p) => p.image)?.image ?? null;
                 const n = byCat.get(c.id)?.length ?? 0;
                 return (
                   <Link
                     key={c.id}
                     href={`/c/${c.slug}`}
-                    className="group relative flex aspect-[4/5] flex-col overflow-hidden rounded-2xl p-2.5 transition active:scale-[.97]"
+                    className="group flex flex-col overflow-hidden rounded-2xl p-1.5 pb-2 transition active:scale-[.97]"
                     style={{ background: TINTS[i % TINTS.length] }}
                   >
-                    <span className="relative z-10 line-clamp-2 text-[14px] font-extrabold leading-tight text-ink">{c.name}</span>
-                    {n > 0 && <span className="relative z-10 text-[12px] font-semibold text-ink/60">{n} item{n === 1 ? "" : "s"}</span>}
-                    <span className="absolute inset-x-1 bottom-1 top-[38%] flex items-end justify-center">
+                    <span className="relative block aspect-square overflow-hidden rounded-xl bg-white/60">
                       {img ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={img} alt="" className="max-h-full max-w-[92%] object-contain mix-blend-multiply transition group-hover:scale-105" loading="lazy" />
+                        <img
+                          src={img}
+                          alt=""
+                          className={`size-full transition group-hover:scale-105 ${own ? "object-cover" : "object-contain p-2 mix-blend-multiply"}`}
+                          loading="lazy"
+                        />
                       ) : (
-                        <span className="mb-2 font-display text-[44px] font-extrabold text-ink/15">{c.name.charAt(0)}</span>
+                        <span className="flex size-full items-center justify-center font-display text-[44px] font-extrabold text-ink/15">{c.name.charAt(0)}</span>
                       )}
                     </span>
+                    <span className="mt-1.5 line-clamp-2 px-1 text-center text-[14px] font-extrabold leading-tight text-ink">{c.name}</span>
+                    {n > 0 && <span className="px-1 text-center text-[12px] font-semibold text-ink/60">{n} item{n === 1 ? "" : "s"}</span>}
                   </Link>
                 );
               })}
@@ -105,8 +111,8 @@ export default async function Home() {
 
         {wa && (
           <a href={wa} rel="noopener" className="flex items-center gap-4 overflow-hidden rounded-[20px] bg-[#25d366] p-4 text-[#073b20]">
-            <span className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-white/40">
-              <WaIcon className="size-7" />
+            <span className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-white shadow-sm">
+              <WaIcon tone="green" className="size-9" />
             </span>
             <span className="min-w-0 flex-1">
               <b className="block font-display text-[19px] leading-tight">Busy? Send your list on WhatsApp</b>

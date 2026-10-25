@@ -138,3 +138,8 @@ body {
 .legal ol { list-style: decimal; padding-left: 1.3em; }
 .legal li { margin: .25em 0; }
 .legal :where(p, li) a { color: var(--color-brand-700); font-weight: 600; text-decoration: underline; }
+
+/* Yellow info strip: endless sideways scroll (two copies, move by half) */
+@keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.ticker { animation: ticker 28s linear infinite; }
+.ticker:hover, .ticker:active { animation-play-state: paused; }
