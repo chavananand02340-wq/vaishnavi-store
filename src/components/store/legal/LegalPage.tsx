@@ -11,7 +11,7 @@ export function who(s: PublicSettings | null) {
   return {
     name,
     legal: s?.legal_name || name,
-    address: s?.address || "Wardha, Maharashtra 442001",
+    address: s?.address || "Medical Chowk, Sawangi (Meghe), Wardha, Maharashtra 442001",
     phone: s?.phone_primary ? `+91 ${s.phone_primary}` : null,
     phone2: s?.phone_secondary ? `+91 ${s.phone_secondary}` : null,
     wa: s?.whatsapp_number ? `+91 ${s.whatsapp_number}` : null,

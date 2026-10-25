@@ -26,7 +26,7 @@ export default async function ContactPage() {
         If something went wrong with an order, tell us with your order number. We reply to every complaint within 48 hours and try to
         resolve it within one month at the latest, as required by the Consumer Protection (E-Commerce) Rules, 2020.
       </p>
-      <p>Grievance officer: <b>{s?.legal_name || w.name}</b>{w.phone ? `, ${w.phone}` : ""}{w.email ? `, ${w.email}` : ""}.</p>
+      <p>Grievance officer: <b>Sangita Rajendra Shiwarkar (Proprietor)</b>, {w.legal}{w.phone ? `, ${w.phone}` : ""}{w.email ? `, ${w.email}` : ""}.</p>
     </LegalPage>
   );
 }
