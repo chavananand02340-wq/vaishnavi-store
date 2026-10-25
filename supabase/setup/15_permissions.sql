@@ -39,7 +39,7 @@ do $$ begin if to_regprocedure('public.search_products(text, integer)') is not n
 do $$ begin if to_regprocedure('public.mark_item_unavailable(uuid, bigint)') is not null then execute 'grant execute on function public.mark_item_unavailable(uuid, bigint) to authenticated'; end if; end $$;
 do $$ begin if to_regprocedure('public.submit_upi_utr(uuid, text)') is not null then execute 'grant execute on function public.submit_upi_utr(uuid, text) to anon, authenticated'; end if; end $$;
 do $$ begin if to_regprocedure('public.search_products(text, integer)') is not null then execute 'grant execute on function public.search_products(text, integer) to anon, authenticated'; end if; end $$;
--- Functions added in part 17 (skipped if part 17 hasn't run yet)
+-- Functions added in parts 18-21 (skipped if not run yet)
 do $$ begin if to_regprocedure('public.quote_cart(jsonb, text, text)') is not null then execute 'grant execute on function public.quote_cart(jsonb, text, text) to anon, authenticated'; end if; end $$;
 do $$ begin if to_regprocedure('public.place_order(uuid, text, text, text, text, public.payment_method, jsonb, integer, text, text, text, text, text)') is not null then execute 'grant execute on function public.place_order(uuid, text, text, text, text, public.payment_method, jsonb, integer, text, text, text, text, text) to anon, authenticated'; end if; end $$;
 do $$ begin if to_regprocedure('public.order_for_notify(uuid, text)') is not null then execute 'grant execute on function public.order_for_notify(uuid, text) to anon, authenticated'; end if; end $$;

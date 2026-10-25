@@ -82,7 +82,7 @@ Phir **Actions → Nightly database backup → Run workflow** se ek baar test ka
 
 ## Optional — Order emails (Resend, 10 min)
 
-1. Supabase SQL Editor me `supabase/setup/17_coupons_sale_legal_email.sql` chalao (ek baar). Last me ek `notify_secret` dikhega — copy karo.
+1. Supabase SQL Editor me parts 17, 18, 19, 20, 21 ek-ek karke chalao. Part 21 ke last me ek `notify_secret` dikhega — copy karo.
 2. https://resend.com par shop ki Gmail se sign up karo → **API Keys → Create API key** (permission: Sending access) → key copy karo.
 3. Netlify → Site configuration → Environment variables me add karo:
    - `RESEND_API_KEY` = Resend wali key
