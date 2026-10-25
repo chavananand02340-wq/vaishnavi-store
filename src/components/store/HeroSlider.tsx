@@ -29,20 +29,20 @@ export function HeroSlider({ banners, productImages }: { banners: Banner[]; prod
     ? banners.map((b) => ({ kind: "image", id: b.id, image: b.image, link: b.link, alt: b.alt ?? "Offer at Vaishnavi Store" }))
     : [
         {
-          kind: "built", id: "b1", bg: "bg-haldi-500", ink: "text-leaf-900", accent: "bg-leaf-700 text-white",
-          title: `Your kirana, at your door in ${s?.default_eta_minutes ?? 30} minutes`,
+          kind: "built", id: "b1", bg: "bg-haldi-500", ink: "text-ink", accent: "bg-brand-600 text-white",
+          title: "Your whole month's ration, in one go",
           text: "Atta, dal, oil, masale and daily needs. Pay cash when it arrives.",
           cta: "Start shopping", href: "#categories", images: imgs(0),
         },
         {
-          kind: "built", id: "b2", bg: "bg-leaf-700", ink: "text-white", accent: "bg-haldi-500 text-leaf-900",
+          kind: "built", id: "b2", bg: "bg-ink", ink: "text-white", accent: "bg-haldi-500 text-ink",
           title: s?.free_delivery_enabled ? `Free delivery on ${formatPaise(s.free_delivery_threshold_paise)} and above` : "Fresh stock, fair prices",
           text: s?.free_delivery_enabled ? `Smaller orders pay just ${formatPaise(s.delivery_fee_paise)}. No minimum order.` : "Same prices as the shop counter.",
           cta: "Fill your cart", href: "#deals", images: imgs(1),
         },
         ...(wa
           ? [{
-              kind: "built" as const, id: "b3", bg: "bg-[#1f9d55]", ink: "text-white", accent: "bg-white text-[#14743e]",
+              kind: "built" as const, id: "b3", bg: "bg-[#25d366]", ink: "text-[#073b20]", accent: "bg-[#073b20] text-white",
               title: "Send your list on WhatsApp",
               text: "Type it or send a photo of your handwritten list. We pack it and deliver.",
               cta: "Open WhatsApp", href: wa, external: true, images: imgs(2),
@@ -89,7 +89,7 @@ export function HeroSlider({ banners, productImages }: { banners: Banner[]; prod
               type="button"
               aria-label={`Show banner ${i + 1}`}
               onClick={() => track.current?.scrollTo({ left: i * track.current.clientWidth, behavior: "smooth" })}
-              className={`h-2 rounded-full transition-all ${i === index ? "w-6 bg-leaf-700" : "w-2 bg-leaf-200"}`}
+              className={`h-2 rounded-full transition-all ${i === index ? "w-6 bg-brand-700" : "w-2 bg-brand-200"}`}
             />
           ))}
         </div>

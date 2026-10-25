@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase/browser";
 import { formatPaise } from "@/lib/money";
 import { istTime } from "@/lib/hours";
 import { Icon } from "@/components/Icon";
+import { WaIcon } from "@/components/WaIcon";
 import { useToast } from "@/components/Toast";
 import { STATUS, StatusPill } from "./ui";
 
@@ -23,6 +24,9 @@ export type OrderRow = {
   instructions: string | null;
   subtotal_paise: number;
   delivery_fee_paise: number;
+  discount_paise: number;
+  coupon_code: string | null;
+  customer_email: string | null;
   total_paise: number;
   payment_method: "cod" | "upi";
   payment_status: "unpaid" | "awaiting_verification" | "paid";
@@ -35,7 +39,7 @@ export type OrderRow = {
 };
 
 export const ORDER_SELECT =
-  "id, order_no, public_token, status, customer_name, phone, address_line, landmark, pincode, instructions, subtotal_paise, delivery_fee_paise, total_paise, payment_method, payment_status, upi_utr, eta_minutes, cancel_reason, created_at, confirmed_at, order_items(id, product_name, variant_label, qty, unit_price_paise, line_total_paise, is_unavailable)";
+  "id, order_no, public_token, status, customer_name, phone, address_line, landmark, pincode, instructions, subtotal_paise, delivery_fee_paise, discount_paise, coupon_code, customer_email, total_paise, payment_method, payment_status, upi_utr, eta_minutes, cancel_reason, created_at, confirmed_at, order_items(id, product_name, variant_label, qty, unit_price_paise, line_total_paise, is_unavailable)";
 
 const NEXT: Partial<Record<OrderRow["status"], { to: string; label: string; icon: string }>> = {
   new: { to: "confirmed", label: "Confirm order", icon: "check" },
@@ -158,8 +162,8 @@ export function OrderCard({
           <a href={`tel:+91${o.phone}`} className="flex h-11 items-center justify-center gap-1.5 rounded-xl bg-sky-50 text-[14px] font-bold text-sky-800 ring-1 ring-sky-200">
             <Icon name="phone" className="size-4" /> Call
           </a>
-          <a href={wa} target="_blank" rel="noopener" className="flex h-11 items-center justify-center gap-1.5 rounded-xl bg-emerald-50 text-[14px] font-bold text-emerald-800 ring-1 ring-emerald-200">
-            <Icon name="chat" className="size-4" /> WhatsApp
+          <a href={wa} target="_blank" rel="noopener" className="flex h-11 items-center justify-center gap-1.5 rounded-xl bg-[#25d366] text-[14px] font-bold text-[#073b20]">
+            <WaIcon className="size-4" /> WhatsApp
           </a>
           <a href={maps} target="_blank" rel="noopener" className="flex h-11 items-center justify-center gap-1.5 rounded-xl bg-slate-100 text-[14px] font-bold text-slate-800 ring-1 ring-slate-200">
             <Icon name="pin" className="size-4" /> Map
@@ -173,6 +177,12 @@ export function OrderCard({
           Items {formatPaise(o.subtotal_paise)}
           <br />
           Delivery {o.delivery_fee_paise ? formatPaise(o.delivery_fee_paise) : "free"}
+          {o.discount_paise > 0 && (
+            <>
+              <br />
+              <span className="font-bold text-emerald-700">Coupon {o.coupon_code} −{formatPaise(o.discount_paise)}</span>
+            </>
+          )}
         </div>
         <div className="text-right">
           <p className="font-display text-[24px] font-extrabold leading-none">{formatPaise(o.total_paise)}</p>

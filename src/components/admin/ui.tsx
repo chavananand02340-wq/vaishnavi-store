@@ -8,7 +8,7 @@ import { Icon } from "@/components/Icon";
  * so the owner and counter staff learn "amber = new order" once.
  */
 export const HUE = {
-  home: { solid: "bg-leaf-700 text-white", soft: "bg-leaf-50 text-leaf-800", ring: "ring-leaf-200", text: "text-leaf-700" },
+  home: { solid: "bg-brand-700 text-white", soft: "bg-brand-50 text-brand-800", ring: "ring-brand-200", text: "text-brand-700" },
   live: { solid: "bg-amber-500 text-amber-950", soft: "bg-amber-50 text-amber-900", ring: "ring-amber-200", text: "text-amber-700" },
   orders: { solid: "bg-indigo-600 text-white", soft: "bg-indigo-50 text-indigo-900", ring: "ring-indigo-200", text: "text-indigo-700" },
   products: { solid: "bg-teal-600 text-white", soft: "bg-teal-50 text-teal-900", ring: "ring-teal-200", text: "text-teal-700" },
@@ -16,6 +16,7 @@ export const HUE = {
   pincodes: { solid: "bg-sky-600 text-white", soft: "bg-sky-50 text-sky-900", ring: "ring-sky-200", text: "text-sky-700" },
   settings: { solid: "bg-slate-700 text-white", soft: "bg-slate-100 text-slate-900", ring: "ring-slate-200", text: "text-slate-700" },
   banners: { solid: "bg-orange-500 text-white", soft: "bg-orange-50 text-orange-900", ring: "ring-orange-200", text: "text-orange-700" },
+  coupons: { solid: "bg-emerald-600 text-white", soft: "bg-emerald-50 text-emerald-900", ring: "ring-emerald-200", text: "text-emerald-700" },
   danger: { solid: "bg-rose-600 text-white", soft: "bg-rose-50 text-rose-900", ring: "ring-rose-200", text: "text-rose-700" },
 } as const;
 export type Hue = keyof typeof HUE;
@@ -89,7 +90,7 @@ export function Switch({ checked, onChange, label, hint, disabled }: { checked: 
         <span className="block text-[15px] font-semibold">{label}</span>
         {hint && <span className="hint block">{hint}</span>}
       </span>
-      <span className={`relative h-8 w-14 shrink-0 rounded-full transition ${checked ? "bg-leaf-600" : "bg-neutral-300"}`}>
+      <span className={`relative h-8 w-14 shrink-0 rounded-full transition ${checked ? "bg-brand-600" : "bg-neutral-300"}`}>
         <span className={`absolute top-1 size-6 rounded-full bg-white shadow transition-all ${checked ? "left-7" : "left-1"}`} />
       </span>
     </button>
@@ -125,7 +126,7 @@ export function Empty({ icon, title, text, action }: { icon: string; title: stri
 export function Spinner() {
   return (
     <div className="flex justify-center py-12">
-      <span className="size-9 animate-spin rounded-full border-4 border-leaf-100 border-t-leaf-700" aria-label="Loading" />
+      <span className="size-9 animate-spin rounded-full border-4 border-brand-100 border-t-brand-700" aria-label="Loading" />
     </div>
   );
 }

@@ -23,6 +23,8 @@ type OrderView = {
   payment_status: "unpaid" | "awaiting_verification" | "paid";
   subtotal_paise: number;
   delivery_fee_paise: number;
+  discount_paise?: number;
+  coupon_code?: string | null;
   total_paise: number;
   customer_first_name: string;
   items: { product_name: string; variant_label: string; qty: number; line_total_paise: number; is_unavailable: boolean }[];
@@ -61,7 +63,7 @@ function OrderInner() {
       <div className="px-6 py-16 text-center">
         <p className="font-display text-[22px] font-bold">Order not found</p>
         <p className="mt-1 text-muted">Check the link, or call the shop with your order number.</p>
-        <Link href="/" className="btn-leaf mt-6 px-8">Go to shop</Link>
+        <Link href="/" className="btn-brand mt-6 px-8">Go to shop</Link>
       </div>
     );
   }
@@ -74,7 +76,7 @@ function OrderInner() {
 
   return (
     <main className="mx-auto max-w-3xl space-y-3 px-3 pb-16 pt-3">
-      <section className={`overflow-hidden rounded-[var(--radius-card)] text-white ${o.status === "cancelled" ? "bg-neutral-700" : "bg-leaf-700"}`}>
+      <section className={`overflow-hidden rounded-[var(--radius-card)] text-white ${o.status === "cancelled" ? "bg-neutral-700" : "bg-brand-700"}`}>
         <div className="p-5">
           {isNew && o.status === "new" && <p className="text-[15px] font-semibold text-haldi-300">Thank you, {o.customer_first_name}!</p>}
           <p className="font-display text-[30px] font-extrabold leading-tight">
@@ -85,7 +87,7 @@ function OrderInner() {
           </p>
         </div>
         {moving && o.eta_minutes ? (
-          <div className="flex items-center gap-3 bg-haldi-500 px-5 py-3 text-leaf-900">
+          <div className="flex items-center gap-3 bg-haldi-500 px-5 py-3 text-brand-900">
             <Icon name="clock" className="size-5" strokeWidth={2.4} />
             <p className="text-[15px] font-bold">
               Arrives in about {o.eta_minutes} min{o.confirmed_at ? ` from ${istTime(o.confirmed_at)}` : " after the shop confirms"}
@@ -100,8 +102,8 @@ function OrderInner() {
             const done = i <= step;
             return (
               <li key={st.key} className="relative flex gap-3 pb-4 last:pb-0">
-                {i < STEPS.length - 1 && <span className={`absolute left-[13px] top-7 h-[calc(100%-20px)] w-0.5 ${i < step ? "bg-leaf-600" : "bg-line"}`} aria-hidden />}
-                <span className={`relative z-10 flex size-7 shrink-0 items-center justify-center rounded-full ${done ? "bg-leaf-700 text-white" : "border-2 border-line bg-white"}`}>
+                {i < STEPS.length - 1 && <span className={`absolute left-[13px] top-7 h-[calc(100%-20px)] w-0.5 ${i < step ? "bg-brand-600" : "bg-line"}`} aria-hidden />}
+                <span className={`relative z-10 flex size-7 shrink-0 items-center justify-center rounded-full ${done ? "bg-brand-700 text-white" : "border-2 border-line bg-white"}`}>
                   {done && <Icon name="check" className="size-4" strokeWidth={3} />}
                 </span>
                 <span>
@@ -132,6 +134,9 @@ function OrderInner() {
         <dl className="mt-3 space-y-1.5 border-t border-dashed border-line pt-3 text-[15px]">
           <div className="flex justify-between"><dt className="text-muted">Items</dt><dd>{formatPaise(o.subtotal_paise)}</dd></div>
           <div className="flex justify-between"><dt className="text-muted">Delivery</dt><dd>{o.delivery_fee_paise === 0 ? "Free" : formatPaise(o.delivery_fee_paise)}</dd></div>
+          {(o.discount_paise ?? 0) > 0 && (
+            <div className="flex justify-between font-semibold text-emerald-700"><dt>Coupon {o.coupon_code}</dt><dd>−{formatPaise(o.discount_paise ?? 0)}</dd></div>
+          )}
           <div className="flex justify-between text-[18px] font-extrabold"><dt>Total</dt><dd>{formatPaise(o.total_paise)}</dd></div>
           <div className="flex justify-between text-muted">
             <dt>Payment</dt>
@@ -145,7 +150,7 @@ function OrderInner() {
 
       <section className="grid grid-cols-2 gap-2">
         {wa && (
-          <a href={wa} rel="noopener" className="btn-leaf">
+          <a href={wa} rel="noopener" className="btn-brand">
             <Icon name="chat" /> WhatsApp shop
           </a>
         )}
@@ -156,7 +161,7 @@ function OrderInner() {
         )}
       </section>
       <p className="px-2 text-center text-[14px] text-muted">Bookmark this page to check your order. It updates on its own.</p>
-      <Link href="/" className="block py-2 text-center text-[15px] font-bold text-leaf-700">Continue shopping</Link>
+      <Link href="/" className="block py-2 text-center text-[15px] font-bold text-brand-700">Continue shopping</Link>
     </main>
   );
 }
@@ -203,7 +208,7 @@ function UpiBox({ token, total, orderNo, waiting, onSent }: { token: string; tot
         <>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={qr} alt={`UPI QR code for ${formatPaise(total)}`} className="mx-auto my-3 size-60" />
-          <a href={link!} className="btn-leaf w-full">Pay with GPay, PhonePe or Paytm</a>
+          <a href={link!} className="btn-brand w-full">Pay with GPay, PhonePe or Paytm</a>
           <p className="mt-2 text-[13px] text-muted">Amount and order number are already filled in.</p>
         </>
       ) : (
@@ -214,9 +219,9 @@ function UpiBox({ token, total, orderNo, waiting, onSent }: { token: string; tot
         <label htmlFor="utr" className="label">Paid? Add the 12-digit UPI reference (optional)</label>
         <div className="flex gap-2">
           <input id="utr" className="field" inputMode="numeric" value={utr} onChange={(e) => setUtr(e.target.value.slice(0, 30))} />
-          <button className="btn-leaf shrink-0" type="submit" disabled={busy || utr.trim().length < 6}>{busy ? "Sending" : "Send"}</button>
+          <button className="btn-brand shrink-0" type="submit" disabled={busy || utr.trim().length < 6}>{busy ? "Sending" : "Send"}</button>
         </div>
-        {msg && <p className={`mt-2 text-[14px] ${msg.ok ? "text-leaf-700" : "text-rose-700"}`}>{msg.text}</p>}
+        {msg && <p className={`mt-2 text-[14px] ${msg.ok ? "text-brand-700" : "text-rose-700"}`}>{msg.text}</p>}
       </form>
     </section>
   );

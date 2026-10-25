@@ -98,3 +98,51 @@ select pg_temp.check(
 reset role;
 select pg_temp.check((select stock_qty = 10 from public.product_variants where label = 'A'), 'cancel restores stock');
 select pg_temp.check((select count(*) >= 1 from public.audit_log), 'changes are audited');
+
+-- coupons ---------------------------------------------------------------
+insert into public.coupons (code, kind, value, min_order_paise, max_discount_paise, per_phone_limit, description)
+values ('DIWALI10', 'percent', 10, 20000, 5000, 1, '10% off'), ('SECRET50', 'flat', 5000, 0, null, null, 'hidden');
+update public.coupons set show_in_checkout = false where code = 'SECRET50';
+
+set request.jwt.claim.sub = '';
+set role anon;
+select pg_temp.check(
+  (public.quote_cart('[{"variant_id":"b0000000-0000-0000-0000-000000000349","qty":1}]', '442001', 'diwali10') ->> 'total_paise')::int = 34900 - 3490 + 3000,
+  'percent coupon: 349 - 34.90 + 30 fee');
+select pg_temp.check(
+  (public.quote_cart('[{"variant_id":"b0000000-0000-0000-0000-000000000100","qty":1}]', '442001', 'DIWALI10') ->> 'coupon_error') is not null,
+  'coupon below its minimum is refused');
+select pg_temp.check(
+  (public.quote_cart('[{"variant_id":"b0000000-0000-0000-0000-000000000500","qty":1}]', '442001', 'DIWALI10') -> 'coupon' ->> 'discount_paise')::int = 5000,
+  'coupon discount capped at max');
+select pg_temp.check(
+  public.quote_cart('[{"variant_id":"b0000000-0000-0000-0000-000000000100","qty":1}]', '442001', 'NOPE99') ->> 'coupon_error' is not null,
+  'unknown coupon refused');
+select pg_temp.check((select count(*) = 1 from public.coupons), 'hidden coupons are not listed to customers');
+select pg_temp.check(
+  public.place_order('d0000000-0000-0000-0000-000000000021', 'Meena', '9123456780', 'Plot 9 Tukum', '442001', 'cod',
+    '[{"variant_id":"b0000000-0000-0000-0000-000000000349","qty":1}]', 34410, null, null, null, 'DIWALI10') ->> 'ok' = 'true',
+  'order with coupon placed');
+select pg_temp.check(
+  public.place_order('d0000000-0000-0000-0000-000000000022', 'Meena', '9123456780', 'Plot 9 Tukum', '442001', 'cod',
+    '[{"variant_id":"b0000000-0000-0000-0000-000000000349","qty":1}]', 34410, null, null, null, 'DIWALI10') ->> 'code' = 'coupon_invalid',
+  'same phone cannot reuse a one-time coupon');
+select pg_temp.check(
+  public.place_order('d0000000-0000-0000-0000-000000000023', 'Raj', '9123456781', 'Plot 9 Tukum', '442001', 'cod',
+    '[{"variant_id":"b0000000-0000-0000-0000-000000000200","qty":1}]', 23000, null, null, null, null, 'not-an-email') ->> 'code' = 'invalid_email',
+  'bad email refused');
+select pg_temp.check(public.order_for_notify((select public_token from (select null::uuid as public_token) x), 'wrong') is null, 'notify needs the secret');
+reset role;
+select pg_temp.check((select used_count = 1 from public.coupons where code = 'DIWALI10'), 'coupon use counted');
+select pg_temp.check((select discount_paise = 3490 and total_paise = 34410 from public.orders where coupon_code = 'DIWALI10'), 'order stores discount');
+select value as sec from private.secrets where name = 'notify' \gset
+select public_token as ctok from public.orders where coupon_code = 'DIWALI10' \gset
+set role anon;
+select pg_temp.check(public.order_for_notify(:'ctok', :'sec') ->> 'phone' = '9123456780', 'notify returns order once with secret');
+select pg_temp.check(public.order_for_notify(:'ctok', :'sec') is null, 'notify does not repeat');
+reset role;
+set role authenticated;
+set request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+select pg_temp.check((public.update_order_status((select id from public.orders where coupon_code = 'DIWALI10'), 'cancelled', 'test') ->> 'ok')::boolean, 'owner cancels coupon order');
+reset role;
+select pg_temp.check((select used_count = 0 from public.coupons where code = 'DIWALI10'), 'cancel gives the coupon use back');

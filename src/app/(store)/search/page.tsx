@@ -36,7 +36,7 @@ function Results() {
       {!loading && term.length >= 2 && data?.length === 0 && (
         <div className="rounded-[var(--radius-card)] bg-white p-4 ring-1 ring-line">
           <p className="text-[15px]">Nothing found for “{term}”. Try another word, like “tel” or “oil”.</p>
-          {wa && <a href={wa} rel="noopener" className="btn-leaf mt-3">Ask the shop on WhatsApp</a>}
+          {wa && <a href={wa} rel="noopener" className="btn-brand mt-3">Ask the shop on WhatsApp</a>}
         </div>
       )}
       {data && data.length > 0 && <ProductGrid products={data} />}

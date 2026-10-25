@@ -1,5 +1,7 @@
 -- Vaishnavi Store setup — part 9 of 15: Place order (server-side checkout)
 -- Run in Supabase → SQL Editor. Safe to run again if it fails halfway.
+-- NOTE: part 17 replaces this function with a coupon-aware version.
+-- If you already ran part 17, don't run this part again (run 17 instead).
 
 -- Public: place an order. Every amount is recomputed here; the browser only
 -- sends variant ids + quantities. p_expected_total_paise is what the customer

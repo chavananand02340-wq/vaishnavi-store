@@ -24,7 +24,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             key={t.id}
             role={t.tone === "error" ? "alert" : "status"}
             className={`animate-pop pointer-events-auto flex max-w-md items-start gap-2 rounded-xl px-4 py-3 text-[15px] font-semibold shadow-lg ${
-              t.tone === "error" ? "bg-rose-700 text-white" : t.tone === "info" ? "bg-ink text-white" : "bg-leaf-700 text-white"
+              t.tone === "error" ? "bg-rose-700 text-white" : t.tone === "info" ? "bg-ink text-white" : "bg-brand-700 text-white"
             }`}
           >
             <Icon name={t.tone === "error" ? "alert" : "check"} className="mt-0.5 size-5 shrink-0" />

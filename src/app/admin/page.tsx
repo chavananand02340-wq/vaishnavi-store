@@ -70,7 +70,7 @@ export default function Dashboard() {
       </div>
 
       {/* Orders on/off: the most important switch */}
-      <section className={`flex flex-wrap items-center gap-4 rounded-2xl p-4 ring-1 ${openNow ? "bg-leaf-700 text-white ring-leaf-800" : "bg-rose-50 text-rose-950 ring-rose-200"}`}>
+      <section className={`flex flex-wrap items-center gap-4 rounded-2xl p-4 ring-1 ${openNow ? "bg-brand-700 text-white ring-brand-800" : "bg-rose-50 text-rose-950 ring-rose-200"}`}>
         <span className={`flex size-12 items-center justify-center rounded-full ${openNow ? "bg-white/15" : "bg-rose-100"}`}>
           <Icon name="power" className="size-6" strokeWidth={2.4} />
         </span>
@@ -84,7 +84,7 @@ export default function Dashboard() {
           type="button"
           onClick={toggleOrders}
           disabled={switching}
-          className={`btn w-full sm:w-auto sm:min-w-36 ${s.accepting_orders ? "bg-white text-rose-700 ring-1 ring-rose-200" : "bg-leaf-700 text-white"}`}
+          className={`btn w-full sm:w-auto sm:min-w-36 ${s.accepting_orders ? "bg-white text-rose-700 ring-1 ring-rose-200" : "bg-brand-700 text-white"}`}
         >
           {switching ? "Saving…" : s.accepting_orders ? "Pause orders" : "Start orders"}
         </button>
@@ -104,6 +104,8 @@ export default function Dashboard() {
           <Tile href="/admin/categories" hue="categories" icon="tag" title="Categories" note="Shelves on the website" />
           <Tile href="/admin/settings" hue="settings" icon="settings" title="Timing & delivery" note={`₹${s.delivery_fee_paise / 100} fee, ${s.default_eta_minutes} min`} />
           <Tile href="/admin/pincodes" hue="pincodes" icon="pin" title="PIN codes" note="Where you deliver" />
+          <Tile href="/admin/coupons" hue="coupons" icon="percent" title="Coupons" note="Discount codes" />
+          <Tile href="/admin/settings#sale" hue="banners" icon="gift" title="Sale banner" note="Diwali sale, % off" />
           <Tile href="/admin/banners" hue="banners" icon="gift" title="Home banners" note="Offers on the home page" />
         </div>
       </section>

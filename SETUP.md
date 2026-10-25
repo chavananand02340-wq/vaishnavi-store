@@ -80,6 +80,19 @@ GitHub repo → **Settings → Secrets and variables → Actions → New reposit
 
 Phir **Actions → Nightly database backup → Run workflow** se ek baar test karo.
 
+## Optional — Order emails (Resend, 10 min)
+
+1. Supabase SQL Editor me `supabase/setup/17_coupons_sale_legal_email.sql` chalao (ek baar). Last me ek `notify_secret` dikhega — copy karo.
+2. https://resend.com par shop ki Gmail se sign up karo → **API Keys → Create API key** (permission: Sending access) → key copy karo.
+3. Netlify → Site configuration → Environment variables me add karo:
+   - `RESEND_API_KEY` = Resend wali key
+   - `NOTIFY_SECRET` = step 1 wala secret
+   - `EMAIL_FROM` = abhi khaali chhodo (domain lene ke baad: `Vaishnavi E-Mart <orders@aapkadomain.in>`)
+4. Netlify → Deploys → **Trigger deploy**.
+5. Owner panel → Shop settings → **Order emails** me apni email daalo.
+
+Domain verify hone tak Resend sirf aapke Resend account wali email par bhejta hai (owner alert kaam karega). Customer receipts ke liye Resend → Domains me apna domain verify karo, phir `EMAIL_FROM` set karo.
+
 ## Kuch galat ho toh
 
 | Problem | Kya karein |

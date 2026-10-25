@@ -2,20 +2,21 @@
 
 /*
   Vaishnavi Store design tokens.
-  leaf  = the shop's signboard green (primary actions, brand)
+  brand = Vaishnavi E-Mart red, from the logo (primary actions)
   haldi = turmeric yellow (delivery promise, cart, highlights)
   kumkum = offer / discount red (used sparingly)
-  page  = cool sage-tinted background so white cards lift off it
+  ink   = charcoal from the logo's E-MART lettering
 */
 @theme {
-  --color-leaf-50: #e8f6ee;
-  --color-leaf-100: #cdebd9;
-  --color-leaf-200: #9bd7b5;
-  --color-leaf-500: #1aa75e;
-  --color-leaf-600: #12924f;
-  --color-leaf-700: #0d7a41;
-  --color-leaf-800: #095c31;
-  --color-leaf-900: #063d21;
+  /* Vaishnavi E-Mart brand red (from the logo) */
+  --color-brand-50: #fff1f1;
+  --color-brand-100: #ffdcdc;
+  --color-brand-200: #ffb8b8;
+  --color-brand-500: #f0202e;
+  --color-brand-600: #e30613;
+  --color-brand-700: #c8050f;
+  --color-brand-800: #9e0710;
+  --color-brand-900: #5f0a0f;
 
   --color-haldi-100: #fff4cc;
   --color-haldi-300: #ffd95a;
@@ -26,10 +27,10 @@
   --color-kumkum-50: #fdeaea;
   --color-kumkum-600: #d92d20;
 
-  --color-page: #f5f7f2;
-  --color-ink: #18241d;
-  --color-muted: #5b6b61;
-  --color-line: #dfe6e0;
+  --color-page: #f6f6f4;
+  --color-ink: #1f2630;
+  --color-muted: #5d6673;
+  --color-line: #e3e5e8;
 
   --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
   --font-sans: var(--font-mukta), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -67,7 +68,7 @@ body {
 
 /* ---------- shared pieces ---------- */
 @utility field {
-  @apply block w-full rounded-xl border border-line bg-white px-3.5 py-3 text-[16px] text-ink outline-none transition placeholder:text-neutral-400 focus:border-leaf-600 focus:ring-4 focus:ring-leaf-100;
+  @apply block w-full rounded-xl border border-line bg-white px-3.5 py-3 text-[16px] text-ink outline-none transition placeholder:text-neutral-400 focus:border-brand-600 focus:ring-4 focus:ring-brand-100;
 }
 @utility label {
   @apply mb-1.5 block text-[14px] font-semibold text-ink;
@@ -78,14 +79,14 @@ body {
 @utility btn {
   @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-4 text-[15px] font-bold transition active:scale-[.98] disabled:pointer-events-none disabled:opacity-50;
 }
-@utility btn-leaf {
-  @apply btn bg-leaf-700 text-white hover:bg-leaf-800;
+@utility btn-brand {
+  @apply btn bg-brand-700 text-white hover:bg-brand-800;
 }
 @utility btn-haldi {
-  @apply btn bg-haldi-500 text-leaf-900 hover:bg-haldi-400;
+  @apply btn bg-haldi-500 text-brand-900 hover:bg-haldi-400;
 }
 @utility btn-plain {
-  @apply btn border border-line bg-white text-ink hover:bg-leaf-50;
+  @apply btn border border-line bg-white text-ink hover:bg-brand-50;
 }
 @utility btn-danger {
   @apply btn border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100;
@@ -128,3 +129,12 @@ body {
   animation: ring 900ms ease-in-out infinite;
   transform-origin: 50% 10%;
 }
+
+/* Policy pages */
+.legal { font-size: 16px; line-height: 1.7; color: var(--color-ink); }
+.legal h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin: 1.6em 0 .4em; line-height: 1.3; }
+.legal p, .legal ul, .legal ol { margin: .6em 0; }
+.legal ul { list-style: disc; padding-left: 1.3em; }
+.legal ol { list-style: decimal; padding-left: 1.3em; }
+.legal li { margin: .25em 0; }
+.legal :where(p, li) a { color: var(--color-brand-700); font-weight: 600; text-decoration: underline; }

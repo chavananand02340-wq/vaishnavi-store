@@ -31,7 +31,7 @@ export default async function CategoryPage({ params }: Props) {
       <StoreHeader compact />
       <div className="mx-auto flex w-full max-w-6xl flex-1">
         {/* Side shelf list, the quick-commerce way of hopping between aisles */}
-        <nav aria-label="Categories" className="no-scrollbar sticky top-[60px] h-[calc(100dvh-60px)] w-[84px] shrink-0 overflow-y-auto border-r border-line bg-white sm:w-[120px]">
+        <nav aria-label="Categories" className="no-scrollbar sticky top-[62px] h-[calc(100dvh-62px)] w-[84px] shrink-0 overflow-y-auto border-r border-line bg-white sm:w-[120px]">
           {categories.map((c) => {
             const active = c.id === cat.id;
             const img = thumb.get(c.id);
@@ -40,18 +40,18 @@ export default async function CategoryPage({ params }: Props) {
                 key={c.id}
                 href={`/c/${c.slug}`}
                 aria-current={active ? "page" : undefined}
-                className={`relative flex flex-col items-center gap-1 px-1.5 py-3 text-center ${active ? "bg-leaf-50" : ""}`}
+                className={`relative flex flex-col items-center gap-1 px-1.5 py-3 text-center ${active ? "bg-brand-50" : ""}`}
               >
-                {active && <span className="absolute right-0 top-2 bottom-2 w-1 rounded-l bg-leaf-700" aria-hidden />}
-                <span className={`flex size-12 items-center justify-center overflow-hidden rounded-xl ${active ? "bg-white ring-2 ring-leaf-700" : "bg-[#f3f6f2]"}`}>
+                {active && <span className="absolute right-0 top-2 bottom-2 w-1 rounded-l bg-brand-700" aria-hidden />}
+                <span className={`flex size-12 items-center justify-center overflow-hidden rounded-xl ${active ? "bg-white ring-2 ring-brand-700" : "bg-[#f3f6f2]"}`}>
                   {img ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={img} alt="" className="size-[80%] object-contain" loading="lazy" />
                   ) : (
-                    <span className="font-display text-[20px] font-extrabold text-leaf-800/60">{c.name.charAt(0)}</span>
+                    <span className="font-display text-[20px] font-extrabold text-brand-800/60">{c.name.charAt(0)}</span>
                   )}
                 </span>
-                <span className={`line-clamp-2 text-[12px] leading-tight ${active ? "font-bold text-leaf-800" : "font-medium text-muted"}`}>{c.name}</span>
+                <span className={`line-clamp-2 text-[12px] leading-tight ${active ? "font-bold text-brand-800" : "font-medium text-muted"}`}>{c.name}</span>
               </Link>
             );
           })}

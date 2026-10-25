@@ -16,6 +16,7 @@ const OWNER_NAV: Item[] = [
   { href: "/admin/products", label: "Products", icon: "box", hue: "products", tab: true },
   { href: "/admin/orders", label: "All orders", icon: "orders", hue: "orders", tab: true },
   { href: "/admin/categories", label: "Categories", icon: "tag", hue: "categories" },
+  { href: "/admin/coupons", label: "Coupons", icon: "percent", hue: "coupons" },
   { href: "/admin/banners", label: "Banners", icon: "gift", hue: "banners" },
   { href: "/admin/pincodes", label: "PIN codes", icon: "pin", hue: "pincodes" },
   { href: "/admin/settings", label: "Shop settings", icon: "settings", hue: "settings" },
@@ -72,8 +73,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
       {isOwner && (
         <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r border-line bg-white lg:flex">
           <div className="px-5 pb-4 pt-5">
-            <p className="font-display text-[22px] font-extrabold leading-none text-leaf-800">Vaishnavi Store</p>
-            <p className="mt-1 text-[13px] text-muted">Owner panel</p>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/logo-compact.png" alt="Vaishnavi E-Mart" width={403} height={144} className="h-11 w-auto" />
+            <p className="mt-1.5 text-[13px] font-semibold text-muted">Owner panel</p>
           </div>
           <nav className="flex-1 space-y-1 px-3" aria-label="Owner menu">
             {nav.map((n) => {
@@ -110,9 +112,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
         {/* Mobile / staff top bar */}
         <header className={`sticky top-0 z-30 border-b border-line bg-white/95 backdrop-blur ${isOwner ? "lg:hidden" : ""}`}>
           <div className="mx-auto flex h-14 max-w-5xl items-center gap-3 px-4">
-            <span className="min-w-0 flex-1">
-              <span className="block truncate font-display text-[18px] font-extrabold leading-tight text-leaf-800">Vaishnavi Store</span>
-              <span className="block text-[12px] text-muted">{isOwner ? (current?.label ?? "Owner panel") : "Counter, live orders"}</span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/logo-compact.png" alt="Vaishnavi E-Mart" width={403} height={144} className="h-9 w-auto shrink-0" />
+            <span className="min-w-0 flex-1 border-l border-line pl-3">
+              <span className="block truncate text-[14px] font-bold leading-tight">{isOwner ? (current?.label ?? "Owner panel") : "Counter, live orders"}</span>
             </span>
             {!isOwner && (
               <button type="button" onClick={signOut} className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-[14px] font-semibold text-rose-700 hover:bg-rose-50">

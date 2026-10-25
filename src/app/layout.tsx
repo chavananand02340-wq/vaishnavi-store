@@ -22,14 +22,14 @@ const site = process.env.NEXT_PUBLIC_SITE_URL;
 export const metadata: Metadata = {
   metadataBase: site ? new URL(site) : undefined,
   icons: { apple: "/apple-touch-icon.png" },
-  title: { default: "Vaishnavi Store", template: "%s | Vaishnavi Store" },
+  title: { default: "Vaishnavi E-Mart", template: "%s | Vaishnavi E-Mart" },
   description: "Groceries and daily essentials from Vaishnavi Store, delivered to your door in about 30 minutes.",
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#0d7a41",
+  themeColor: "#e30613",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

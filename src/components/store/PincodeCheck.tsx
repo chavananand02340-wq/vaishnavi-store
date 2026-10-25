@@ -47,7 +47,7 @@ export function PincodeCheck() {
   if (saved) {
     return (
       <div className="flex items-center gap-3 rounded-[var(--radius-card)] bg-white p-3 ring-1 ring-line">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-leaf-50 text-leaf-700">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-700">
           <Icon name="pin" />
         </span>
         <p className="flex-1 text-[15px] leading-snug">
@@ -55,7 +55,7 @@ export function PincodeCheck() {
           <br />
           <span className="text-muted">Your order reaches you in about half an hour.</span>
         </p>
-        <button type="button" className="text-[14px] font-semibold text-leaf-700 underline" onClick={() => setSaved(null)}>
+        <button type="button" className="text-[14px] font-semibold text-brand-700 underline" onClick={() => setSaved(null)}>
           Change
         </button>
       </div>
@@ -79,11 +79,11 @@ export function PincodeCheck() {
             setResult(null);
           }}
         />
-        <button className="btn-leaf shrink-0" type="submit" disabled={busy || pin.length !== 6}>
+        <button className="btn-brand shrink-0" type="submit" disabled={busy || pin.length !== 6}>
           {busy ? "Checking" : "Check"}
         </button>
       </div>
-      {result && <p className={`mt-2 text-[14px] ${result.ok ? "text-leaf-700" : "text-rose-700"}`} role="status">{result.text}</p>}
+      {result && <p className={`mt-2 text-[14px] ${result.ok ? "text-brand-700" : "text-rose-700"}`} role="status">{result.text}</p>}
     </form>
   );
 }

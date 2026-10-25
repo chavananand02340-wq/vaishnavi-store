@@ -11,7 +11,7 @@ export function Stepper({ qty, max, onChange, label, big = false }: { qty: numbe
   const cap = Math.min(MAX_QTY, max);
   const size = big ? "h-12 text-[17px]" : "h-9 text-[15px]";
   return (
-    <div className={`flex items-center overflow-hidden rounded-lg bg-leaf-700 text-white ${size}`} role="group" aria-label={`Quantity of ${label}`}>
+    <div className={`flex items-center overflow-hidden rounded-lg bg-brand-700 text-white ${size}`} role="group" aria-label={`Quantity of ${label}`}>
       <button type="button" className={`flex h-full items-center justify-center ${big ? "w-12" : "w-9"}`} onClick={() => onChange(qty - 1)} aria-label="Remove one">
         <Icon name="minus" className="size-4" strokeWidth={3} />
       </button>
@@ -46,7 +46,7 @@ export function AddButton({ product, variantId, big = false }: { product: CardPr
       <button
         type="button"
         onClick={() => add({ variantId: v.id, productId: product.id, name: product.name, label: v.label, price: v.price, image: product.image, max: v.stock })}
-        className={`rounded-lg border-[1.5px] border-leaf-700 bg-leaf-50 font-extrabold text-leaf-700 transition hover:bg-leaf-100 active:scale-95 ${
+        className={`rounded-lg border-[1.5px] border-brand-700 bg-brand-50 font-extrabold text-brand-700 transition hover:bg-brand-100 active:scale-95 ${
           big ? "h-12 px-8 text-[17px]" : "h-9 px-4 text-[15px]"
         }`}
       >
@@ -62,7 +62,7 @@ export function ProductImage({ src, alt, className = "" }: { src: string | null;
     // eslint-disable-next-line @next/next/no-img-element
     <img src={src} alt={alt} loading="lazy" decoding="async" className={`size-full object-contain ${className}`} />
   ) : (
-    <span className="flex size-full items-center justify-center text-leaf-200" aria-hidden>
+    <span className="flex size-full items-center justify-center text-brand-200" aria-hidden>
       <Icon name="box" className="size-1/3" strokeWidth={1.4} />
     </span>
   );
@@ -97,7 +97,7 @@ export function ProductCard({ product, width }: { product: CardProduct; width?: 
                 onClick={() => setVariantId(x.id)}
                 aria-pressed={x.id === v.id}
                 className={`shrink-0 rounded-md border px-1.5 py-0.5 text-[12px] font-semibold ${
-                  x.id === v.id ? "border-leaf-700 bg-leaf-50 text-leaf-800" : "border-line text-muted"
+                  x.id === v.id ? "border-brand-700 bg-brand-50 text-brand-800" : "border-line text-muted"
                 } ${x.stock <= 0 ? "line-through opacity-60" : ""}`}
               >
                 {x.label}

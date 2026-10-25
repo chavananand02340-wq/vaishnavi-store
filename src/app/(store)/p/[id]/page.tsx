@@ -44,7 +44,7 @@ export default async function ProductPage({ params }: Props) {
     <>
       <StoreHeader compact />
       <main className="mx-auto w-full max-w-6xl px-4 pt-3">
-        <Link href={`/c/${cat.slug}`} className="mb-3 inline-flex items-center gap-1 text-[15px] font-semibold text-leaf-700">
+        <Link href={`/c/${cat.slug}`} className="mb-3 inline-flex items-center gap-1 text-[15px] font-semibold text-brand-700">
           <Icon name="left" className="size-4" strokeWidth={2.6} /> {cat.name}
         </Link>
         <ProductDetail product={card} images={images} description={p.description} />

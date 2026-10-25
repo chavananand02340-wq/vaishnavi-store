@@ -5,6 +5,7 @@ import { useState } from "react";
 import { formatPaise } from "@/lib/money";
 import { waLink, type CardProduct } from "@/lib/cards";
 import { Icon } from "@/components/Icon";
+import { WaIcon } from "@/components/WaIcon";
 import { AddButton, ProductImage } from "./ProductCard";
 import { useCart } from "./cart";
 import { FreeDeliveryMeter } from "./CartBar";
@@ -33,7 +34,7 @@ export function ProductDetail({ product, images, description }: { product: CardP
                   key={src}
                   type="button"
                   onClick={() => setShown(i)}
-                  className={`size-16 shrink-0 overflow-hidden rounded-xl bg-white ring-2 ${i === shown ? "ring-leaf-700" : "ring-line"}`}
+                  className={`size-16 shrink-0 overflow-hidden rounded-xl bg-white ring-2 ${i === shown ? "ring-brand-700" : "ring-line"}`}
                   aria-label={`Photo ${i + 1}`}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -64,7 +65,7 @@ export function ProductDetail({ product, images, description }: { product: CardP
                   type="button"
                   onClick={() => setVariantId(x.id)}
                   aria-pressed={x.id === v.id}
-                  className={`rounded-xl border-[1.5px] px-2 py-2.5 text-left ${x.id === v.id ? "border-leaf-700 bg-leaf-50" : "border-line bg-white"} ${x.stock <= 0 ? "opacity-55" : ""}`}
+                  className={`rounded-xl border-[1.5px] px-2 py-2.5 text-left ${x.id === v.id ? "border-brand-700 bg-brand-50" : "border-line bg-white"} ${x.stock <= 0 ? "opacity-55" : ""}`}
                 >
                   <span className="block text-[15px] font-bold">{x.label}</span>
                   <span className="block text-[13px] text-muted">{x.stock <= 0 ? "Out of stock" : formatPaise(x.price)}</span>
@@ -75,8 +76,8 @@ export function ProductDetail({ product, images, description }: { product: CardP
 
           {bulk && (
             <a href={bulk} rel="noopener" className="flex items-center gap-3 rounded-xl bg-white p-3 text-[15px] ring-1 ring-line">
-              <Icon name="chat" className="size-5 shrink-0 text-leaf-700" />
-              <span className="flex-1">Need more than 20, or a loose quantity? <b className="text-leaf-700">Ask on WhatsApp</b></span>
+              <WaIcon className="size-5 shrink-0 text-[#128c4a]" />
+              <span className="flex-1">Need more than 20, or a loose quantity? <b className="text-brand-700">Ask on WhatsApp</b></span>
             </a>
           )}
 
@@ -95,7 +96,7 @@ export function ProductDetail({ product, images, description }: { product: CardP
           <div className="min-w-0 flex-1">
             {count > 0 ? (
               <>
-                <Link href="/cart" className="text-[15px] font-bold text-leaf-700 underline">
+                <Link href="/cart" className="text-[15px] font-bold text-brand-700 underline">
                   View cart ({count}), {formatPaise(subtotal)}
                 </Link>
                 <FreeDeliveryMeter subtotal={subtotal} />

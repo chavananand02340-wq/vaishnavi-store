@@ -15,13 +15,25 @@ type S = {
   open_time: string; close_time: string; accepting_orders: boolean; closed_message: string | null; announcement: string | null;
   delivery_fee_paise: number; free_delivery_enabled: boolean; free_delivery_threshold_paise: number; min_order_paise: number | null;
   default_eta_minutes: number; cod_enabled: boolean; upi_enabled: boolean; upi_id: string | null; upi_payee_name: string | null; low_stock_threshold: number;
+  sale_enabled: boolean; sale_title: string | null; sale_subtitle: string | null; sale_percent: number | null; sale_coupon_code: string | null; sale_theme: Theme;
+  legal_name: string | null; gstin: string | null; fssai_number: string | null; support_email: string | null; notify_email: string | null;
 };
+type Theme = "festive" | "red" | "green" | "night";
+const THEMES: { key: Theme; label: string; cls: string }[] = [
+  { key: "festive", label: "Festive", cls: "bg-[#5a0b2e] text-[#ffcf5a]" },
+  { key: "red", label: "Red", cls: "bg-brand-600 text-white" },
+  { key: "green", label: "Green", cls: "bg-[#0f7a45] text-white" },
+  { key: "night", label: "Dark", cls: "bg-ink text-haldi-400" },
+];
+const SALE_PRESETS = ["Diwali Sale", "Dhanteras Offer", "Holi Sale", "Weekend Sale", "Monthly Ration Sale", "New Year Sale"];
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 type F = Record<
   "store_name" | "tagline" | "address" | "phone_primary" | "phone_secondary" | "whatsapp_number" | "email" | "instagram_url" | "maps_url" |
-  "open_time" | "close_time" | "closed_message" | "announcement" | "delivery_fee" | "threshold" | "min_order" | "eta" | "upi_id" | "upi_payee_name" | "low_stock",
+  "open_time" | "close_time" | "closed_message" | "announcement" | "delivery_fee" | "threshold" | "min_order" | "eta" | "upi_id" | "upi_payee_name" | "low_stock" |
+  "sale_title" | "sale_subtitle" | "sale_percent" | "sale_coupon_code" | "legal_name" | "gstin" | "fssai_number" | "support_email" | "notify_email",
   string
-> & { accepting_orders: boolean; free_delivery_enabled: boolean; cod_enabled: boolean; upi_enabled: boolean };
+> & { accepting_orders: boolean; free_delivery_enabled: boolean; cod_enabled: boolean; upi_enabled: boolean; sale_enabled: boolean; sale_theme: Theme };
 
 const toForm = (s: S): F => ({
   store_name: s.store_name, tagline: s.tagline ?? "", address: s.address ?? "", phone_primary: s.phone_primary ?? "", phone_secondary: s.phone_secondary ?? "",
@@ -30,6 +42,9 @@ const toForm = (s: S): F => ({
   delivery_fee: paiseToRupeesInput(s.delivery_fee_paise), threshold: paiseToRupeesInput(s.free_delivery_threshold_paise), min_order: paiseToRupeesInput(s.min_order_paise),
   eta: String(s.default_eta_minutes), upi_id: s.upi_id ?? "", upi_payee_name: s.upi_payee_name ?? "", low_stock: String(s.low_stock_threshold),
   accepting_orders: s.accepting_orders, free_delivery_enabled: s.free_delivery_enabled, cod_enabled: s.cod_enabled, upi_enabled: s.upi_enabled,
+  sale_enabled: s.sale_enabled ?? false, sale_theme: s.sale_theme ?? "festive", sale_title: s.sale_title ?? "", sale_subtitle: s.sale_subtitle ?? "",
+  sale_percent: s.sale_percent ? String(s.sale_percent) : "", sale_coupon_code: s.sale_coupon_code ?? "",
+  legal_name: s.legal_name ?? "", gstin: s.gstin ?? "", fssai_number: s.fssai_number ?? "", support_email: s.support_email ?? "", notify_email: s.notify_email ?? "",
 });
 
 const mobile = (v: string) => {
@@ -56,6 +71,7 @@ export default function SettingsPage() {
   const [f, setF] = useState<F | null>(null);
   const [saving, setSaving] = useState(false);
   const { data, error, loading, reload } = useAsync(async () => must(await supabase().from("store_settings").select("*").eq("id", 1).single()) as S);
+  const coupons = useAsync(async () => ((await supabase().from("coupons").select("code, kind, value, is_active").order("created_at", { ascending: false })).data ?? []) as { code: string; kind: string; value: number; is_active: boolean }[]);
   useEffect(() => {
     if (data) setF(toForm(data));
   }, [data]);
@@ -84,6 +100,11 @@ export default function SettingsPage() {
     if (p1 === undefined || p2 === undefined || wa === undefined) return toast("Phone numbers must be 10 digits", "error");
     if (f.upi_id.trim() && !/^[a-zA-Z0-9.\-_]{2,200}@[a-zA-Z]{2,64}$/.test(f.upi_id.trim())) return toast("UPI ID looks wrong, e.g. shopname@okaxis", "error");
     if (f.upi_enabled && (!f.upi_id.trim() || !f.upi_payee_name.trim())) return toast("To turn on UPI, add the UPI ID and name", "error");
+    const salePct = f.sale_percent.trim() ? Number(f.sale_percent) : null;
+    if (salePct != null && (!Number.isInteger(salePct) || salePct < 1 || salePct > 90)) return toast("Sale percent must be 1 to 90", "error");
+    if (f.sale_enabled && !f.sale_title.trim()) return toast("Write the sale name, e.g. Diwali Sale", "error");
+    if (f.support_email.trim() && !EMAIL_RE.test(f.support_email.trim())) return toast("Support email looks wrong", "error");
+    if (f.notify_email.trim() && !EMAIL_RE.test(f.notify_email.trim())) return toast("Order alert email looks wrong", "error");
     if (!/^\d{2}:\d{2}$/.test(f.open_time) || !/^\d{2}:\d{2}$/.test(f.close_time)) return toast("Set opening and closing time", "error");
 
     setSaving(true);
@@ -98,6 +119,10 @@ export default function SettingsPage() {
         delivery_fee_paise: fee, free_delivery_enabled: f.free_delivery_enabled, free_delivery_threshold_paise: threshold, min_order_paise: minOrder,
         default_eta_minutes: eta, cod_enabled: f.cod_enabled, upi_enabled: f.upi_enabled, upi_id: f.upi_id.trim() || null, upi_payee_name: f.upi_payee_name.trim() || null,
         low_stock_threshold: low,
+        sale_enabled: f.sale_enabled, sale_theme: f.sale_theme, sale_title: f.sale_title.trim() || null, sale_subtitle: f.sale_subtitle.trim() || null,
+        sale_percent: salePct, sale_coupon_code: f.sale_coupon_code || null,
+        legal_name: f.legal_name.trim() || null, gstin: f.gstin.trim().toUpperCase() || null, fssai_number: f.fssai_number.trim() || null,
+        support_email: f.support_email.trim() || null, notify_email: f.notify_email.trim() || null,
       })
       .eq("id", 1);
     setSaving(false);
@@ -116,6 +141,72 @@ export default function SettingsPage() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="space-y-4">
+      <div id="sale" className="scroll-mt-20">
+        <Section icon="gift" color="bg-orange-500 text-white" title="Sale banner (top of home page)">
+          <Switch checked={f.sale_enabled} onChange={(x) => setF({ ...f, sale_enabled: x })} label="Show a sale" hint="Off = the banner shows your normal welcome message." />
+          <div>
+            <label className="label" htmlFor="stitle">Sale name</label>
+            <input id="stitle" className="field" value={f.sale_title} onChange={set("sale_title")} maxLength={60} placeholder="Diwali Sale" />
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {SALE_PRESETS.map((t) => (
+                <button key={t} type="button" onClick={() => setF({ ...f, sale_title: t })} className={`rounded-full px-3 py-1 text-[13px] font-semibold ring-1 ${f.sale_title === t ? "bg-orange-500 text-white ring-orange-500" : "bg-white ring-line"}`}>
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field id="spct" label="Up to % off" inputMode="numeric" value={f.sale_percent} onChange={set("sale_percent")} placeholder="10" hint="Big number on the banner" />
+            <div>
+              <label className="label" htmlFor="scode">Coupon on banner</label>
+              <select
+                id="scode"
+                className="field"
+                value={f.sale_coupon_code}
+                onChange={(e) => {
+                  const code = e.target.value;
+                  const c = coupons.data?.find((x) => x.code === code);
+                  setF({ ...f, sale_coupon_code: code, sale_percent: c && c.kind === "percent" && !f.sale_percent ? String(c.value) : f.sale_percent });
+                }}
+              >
+                <option value="">No coupon</option>
+                {(coupons.data ?? []).map((c) => (
+                  <option key={c.code} value={c.code}>{c.code}{c.is_active ? "" : " (off)"}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <Field id="ssub" label="Small line (optional)" value={f.sale_subtitle} onChange={set("sale_subtitle")} maxLength={120} placeholder="On sweets, dry fruits and pooja items. Till 3 Nov." />
+          <div>
+            <span className="label">Colour</span>
+            <div className="grid grid-cols-4 gap-2">
+              {THEMES.map((t) => (
+                <button key={t.key} type="button" onClick={() => setF({ ...f, sale_theme: t.key })} className={`rounded-xl px-2 py-3 text-[13px] font-bold ${t.cls} ${f.sale_theme === t.key ? "ring-4 ring-orange-400 ring-offset-2" : ""}`}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          {f.sale_enabled && f.sale_title && (
+            <div className={`flex items-center justify-between rounded-2xl p-4 ${THEMES.find((t) => t.key === f.sale_theme)?.cls}`}>
+              <div>
+                <p className="font-display text-[22px] font-extrabold leading-tight">{f.sale_title}</p>
+                {f.sale_coupon_code && <p className="mt-1 text-[13px] font-bold opacity-90">Use code {f.sale_coupon_code}</p>}
+              </div>
+              {f.sale_percent && (
+                <p className="text-center font-display font-extrabold leading-none">
+                  <span className="block text-[11px]">— UP TO —</span>
+                  <span className="text-[38px]">{f.sale_percent}%</span>
+                  <span className="block text-[15px]">OFF</span>
+                </p>
+              )}
+            </div>
+          )}
+          {f.sale_enabled && !f.sale_coupon_code && (
+            <p className="rounded-xl bg-orange-50 px-3 py-2.5 text-[13px] text-orange-900">The banner only shows the offer. To give the discount, make a coupon in <a href="/admin/coupons" className="font-bold underline">Coupons</a> and pick it here.</p>
+          )}
+        </Section>
+      </div>
           <Section icon="clock" color="bg-amber-500 text-amber-950" title="Timing and orders">
             <Switch checked={f.accepting_orders} onChange={(x) => setF({ ...f, accepting_orders: x })} label="Take online orders" hint="Turn off for a holiday or a very busy day. People can still browse." />
             <div className="grid grid-cols-2 gap-3">
@@ -155,7 +246,7 @@ export default function SettingsPage() {
         </div>
 
         <div className="space-y-4">
-          <Section icon="store" color="bg-leaf-700 text-white" title="Shop details">
+          <Section icon="store" color="bg-brand-700 text-white" title="Shop details">
             <Field id="name" label="Shop name" value={f.store_name} onChange={set("store_name")} maxLength={80} />
             <Field id="tag" label="Short line under the name (optional)" value={f.tagline} onChange={set("tagline")} maxLength={120} placeholder="Your neighbourhood kirana since 1998" />
             <div>
@@ -170,6 +261,19 @@ export default function SettingsPage() {
             <Field id="email" label="Email (optional)" type="email" value={f.email} onChange={set("email")} />
             <Field id="ig" label="Instagram link" type="url" value={f.instagram_url} onChange={set("instagram_url")} />
             <Field id="maps" label="Google Maps link" type="url" value={f.maps_url} onChange={set("maps_url")} />
+          </Section>
+
+          <Section icon="mail" color="bg-sky-600 text-white" title="Order emails">
+            <Field id="notify" label="Send new-order emails to" type="email" value={f.notify_email} onChange={set("notify_email")} placeholder="vaishnavistore.web@gmail.com" hint="You get an email for every new order. Leave empty to turn off." />
+          </Section>
+
+          <Section icon="doc" color="bg-slate-700 text-white" title="Legal details (shown on policy pages and footer)">
+            <Field id="legal" label="Registered business name" value={f.legal_name} onChange={set("legal_name")} maxLength={120} placeholder="Vaishnavi Store (Prop. Sangita Shiwarkar)" />
+            <div className="grid grid-cols-2 gap-3">
+              <Field id="fssai" label="FSSAI licence no." value={f.fssai_number} onChange={set("fssai_number")} maxLength={20} inputMode="numeric" />
+              <Field id="gst" label="GSTIN (optional)" value={f.gstin} onChange={set("gstin")} maxLength={20} autoCapitalize="characters" />
+            </div>
+            <Field id="semail" label="Customer support email" type="email" value={f.support_email} onChange={set("support_email")} maxLength={120} />
           </Section>
 
           <Section icon="alert" color="bg-rose-600 text-white" title="Stock alerts">

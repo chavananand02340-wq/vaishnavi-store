@@ -1,5 +1,7 @@
 -- Vaishnavi Store setup — part 8 of 15: Cart pricing (delivery fee logic)
 -- Run in Supabase → SQL Editor. Safe to run again if it fails halfway.
+-- NOTE: part 17 replaces this function with a coupon-aware version.
+-- If you already ran part 17, don't run this part again (run 17 instead).
 
 -- Build a trusted quote from DB prices. p_items = [{"variant_id": uuid, "qty": int}, ...]
 -- p_pincode may be NULL (cart page before the customer enters a PIN).

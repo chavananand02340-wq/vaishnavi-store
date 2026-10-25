@@ -7,7 +7,9 @@ import { StoreHeader } from "@/components/store/StoreHeader";
 import { ProductRow } from "@/components/store/ProductCard";
 import { PincodeCheck } from "@/components/store/PincodeCheck";
 import { HeroSlider } from "@/components/store/HeroSlider";
+import { SaleHero } from "@/components/store/SaleHero";
 import { Icon } from "@/components/Icon";
+import { WaIcon } from "@/components/WaIcon";
 
 // Each shelf gets its own colour so the page feels like a stocked shop.
 const TINTS = ["#ffe9a8", "#cdeedb", "#ffd9cf", "#d6e6ff", "#e7dcff", "#c9f0ea", "#fbe0c4", "#e3efc0", "#ffd6ea", "#d9f2c8"];
@@ -20,7 +22,7 @@ function SectionHead({ id, title, href, count, dot }: { id: string; title: strin
         {title}
       </h2>
       {href && (
-        <Link href={href} className="flex shrink-0 items-center gap-0.5 rounded-full bg-leaf-50 px-3 py-1.5 text-[14px] font-bold text-leaf-700">
+        <Link href={href} className="flex shrink-0 items-center gap-0.5 rounded-full bg-brand-50 px-3 py-1.5 text-[14px] font-bold text-brand-700">
           See all{count ? ` ${count}` : ""} <Icon name="right" className="size-4" strokeWidth={2.6} />
         </Link>
       )}
@@ -45,7 +47,7 @@ export default async function Home() {
 
   const trust = [
     { icon: "clock", text: `${s?.default_eta_minutes ?? 30} min delivery`, bg: "bg-haldi-100 text-haldi-700" },
-    { icon: "rupee", text: s?.cod_enabled ? "Cash on delivery" : "Easy payment", bg: "bg-leaf-50 text-leaf-800" },
+    { icon: "rupee", text: s?.cod_enabled ? "Cash on delivery" : "Easy payment", bg: "bg-brand-50 text-brand-800" },
     { icon: "store", text: "Your local shop", bg: "bg-sky-50 text-sky-800" },
     ...(s?.free_delivery_enabled ? [{ icon: "truck", text: `Free delivery ${formatPaise(s.free_delivery_threshold_paise)}+`, bg: "bg-rose-50 text-rose-800" }] : []),
   ];
@@ -54,7 +56,7 @@ export default async function Home() {
     <>
       <StoreHeader />
       <main className="mx-auto w-full max-w-6xl space-y-7 px-4 pb-10 pt-4">
-        <HeroSlider banners={banners} productImages={images} />
+        <SaleHero s={s} productImages={images} />
 
         <ul className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 sm:grid sm:grid-cols-4" aria-label="Why order from us">
           {trust.map((t) => (
@@ -65,7 +67,7 @@ export default async function Home() {
         </ul>
 
         <section id="categories" aria-labelledby="cats" className="scroll-mt-20">
-          <SectionHead id="cats" title="Shop by category" dot="#f2b705" />
+          <SectionHead id="cats" title="Shop by category" dot="#e30613" />
           {categories.length === 0 ? (
             <p className="rounded-[var(--radius-card)] bg-white p-4 text-[15px] text-muted ring-1 ring-line">
               The shelves are being stocked. Please check back in a little while.
@@ -99,14 +101,16 @@ export default async function Home() {
           )}
         </section>
 
+        <HeroSlider banners={banners} productImages={images} />
+
         {wa && (
-          <a href={wa} rel="noopener" className="flex items-center gap-4 overflow-hidden rounded-[20px] bg-[#1f9d55] p-4 text-white">
-            <span className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-white/15">
-              <Icon name="chat" className="size-7" strokeWidth={2.2} />
+          <a href={wa} rel="noopener" className="flex items-center gap-4 overflow-hidden rounded-[20px] bg-[#25d366] p-4 text-[#073b20]">
+            <span className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-white/40">
+              <WaIcon className="size-7" />
             </span>
             <span className="min-w-0 flex-1">
               <b className="block font-display text-[19px] leading-tight">Busy? Send your list on WhatsApp</b>
-              <span className="text-[14px] text-white/90">Type it or send a photo of your written list. We'll pack and deliver it.</span>
+              <span className="text-[14px] text-[#073b20]/80">Type it or send a photo of your written list. We'll pack and deliver it.</span>
             </span>
             <Icon name="right" className="size-6 shrink-0" strokeWidth={2.6} />
           </a>
@@ -121,7 +125,7 @@ export default async function Home() {
 
         {featured.length > 0 && (
           <section aria-labelledby="popular">
-            <SectionHead id="popular" title="Shop favourites" dot="#0d7a41" />
+            <SectionHead id="popular" title="Shop favourites" dot="#e30613" />
             <ProductRow products={featured} />
           </section>
         )}
@@ -133,7 +137,7 @@ export default async function Home() {
           if (items.length === 0) return null;
           return (
             <section key={c.id} aria-labelledby={`row-${c.id}`}>
-              <SectionHead id={`row-${c.id}`} title={c.name} href={`/c/${c.slug}`} count={items.length} dot={["#f2b705", "#0d7a41", "#d92d20", "#2563eb", "#7c3aed"][i % 5]} />
+              <SectionHead id={`row-${c.id}`} title={c.name} href={`/c/${c.slug}`} count={items.length} dot={["#e30613", "#f2b705", "#1f2630", "#2563eb", "#0f7a45"][i % 5]} />
               <ProductRow products={items.slice(0, 10)} />
             </section>
           );
@@ -141,14 +145,14 @@ export default async function Home() {
 
         {help && (
           <a href={help} rel="noopener" className="flex items-center gap-4 rounded-[var(--radius-card)] bg-white p-4 ring-1 ring-line">
-            <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-leaf-700 text-white">
+            <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-brand-700 text-white">
               <Icon name="search" />
             </span>
             <span className="flex-1">
               <b className="block text-[16px]">Can't find something?</b>
               <span className="text-[15px] text-muted">Message us. If it's on our shelf, we'll add it to your order.</span>
             </span>
-            <Icon name="right" className="size-5 text-leaf-700" />
+            <Icon name="right" className="size-5 text-brand-700" />
           </a>
         )}
       </main>

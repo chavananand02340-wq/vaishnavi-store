@@ -13,7 +13,15 @@ const settings = {
   timezone: "Asia/Kolkata", open_time: "00:00:00", close_time: "23:59:00", accepting_orders: true, closed_message: null, announcement: null,
   delivery_fee_paise: 3000, free_delivery_enabled: true, free_delivery_threshold_paise: 35000, min_order_paise: null, default_eta_minutes: 30,
   cod_enabled: true, upi_enabled: true, upi_id: "vaishnavistore@okaxis", upi_payee_name: "Vaishnavi Store", low_stock_threshold: 5,
+  sale_enabled: true, sale_title: "Diwali Sale", sale_subtitle: "On sweets, dry fruits and pooja items. Till 3 Nov.", sale_percent: 10,
+  sale_coupon_code: "DIWALI10", sale_theme: "festive", legal_name: "Vaishnavi Store (Prop. Sangita Shiwarkar)", gstin: null,
+  fssai_number: "21524000000000", support_email: "vaishnavistore.web@gmail.com", notify_email: "vaishnavistore.web@gmail.com",
 };
+const coupons = [
+  { id: "c0000000-0000-4000-8000-000000000001", code: "DIWALI10", description: "Diwali offer: 10% off, up to ₹100", kind: "percent", value: 10, min_order_paise: 30000, max_discount_paise: 10000, starts_at: null, ends_at: new Date(now + 9 * 864e5).toISOString(), usage_limit: 200, used_count: 37, per_phone_limit: 1, show_in_checkout: true, is_active: true, created_at: iso(3000) },
+  { id: "c0000000-0000-4000-8000-000000000002", code: "FIRST50", description: null, kind: "flat", value: 5000, min_order_paise: 50000, max_discount_paise: null, starts_at: null, ends_at: null, usage_limit: null, used_count: 12, per_phone_limit: 1, show_in_checkout: true, is_active: true, created_at: iso(6000) },
+  { id: "c0000000-0000-4000-8000-000000000003", code: "STAFF5", description: null, kind: "percent", value: 5, min_order_paise: 0, max_discount_paise: null, starts_at: null, ends_at: null, usage_limit: null, used_count: 3, per_phone_limit: null, show_in_checkout: false, is_active: false, created_at: iso(9000) },
+];
 
 const cats = [
   ["c1", "Atta, Rice & Dal", "atta-rice-dal"], ["c2", "Oil & Ghee", "oil-ghee"], ["c3", "Masala & Spices", "masala-spices"],
@@ -74,7 +82,7 @@ function order(no, status, mins, items, extra = {}) {
   return {
     id: uuid(`o${no}`), order_no: no, public_token: uuid(`t${no}`), status, customer_name: extra.name ?? "Priya Deshmukh", phone: "9876543210",
     address_line: extra.address ?? "Flat 203, Sai Residency, Tukum", landmark: "near Tukum water tank", pincode: "442001", instructions: extra.note ?? null,
-    subtotal_paise: sub, delivery_fee_paise: fee, total_paise: sub + fee, payment_method: extra.pay ?? "cod", payment_status: extra.paid ?? "unpaid",
+    subtotal_paise: sub, delivery_fee_paise: fee, discount_paise: extra.disc ?? 0, coupon_code: extra.coupon ?? null, customer_email: null, total_paise: sub + fee - (extra.disc ?? 0), payment_method: extra.pay ?? "cod", payment_status: extra.paid ?? "unpaid",
     upi_utr: extra.utr ?? null, eta_minutes: 30, cancel_reason: extra.reason ?? null, created_at: iso(mins), confirmed_at: status === "new" ? null : iso(mins - 3),
     order_items: its,
   };
@@ -82,7 +90,7 @@ function order(no, status, mins, items, extra = {}) {
 const orders = [
   order(1012, "new", 2, [[0, 0, 1], [1, 1, 1], [5, 0, 2]], { name: "Priya Deshmukh", note: "Please call before coming, 2nd floor" }),
   order(1011, "new", 6, [[11, 0, 3], [16, 0, 2]], { name: "Rahul Wankhede", address: "Plot 18, Babupeth" }),
-  order(1010, "confirmed", 14, [[14, 0, 1], [8, 0, 1], [12, 0, 1, true]], { name: "Sneha Patil", pay: "upi", paid: "awaiting_verification", utr: "412345678901" }),
+  order(1010, "confirmed", 14, [[14, 0, 1], [8, 0, 1], [12, 0, 1, true]], { name: "Sneha Patil", coupon: "DIWALI10", disc: 5200, pay: "upi", paid: "awaiting_verification", utr: "412345678901" }),
   order(1009, "out_for_delivery", 28, [[6, 0, 1], [2, 0, 1]], { name: "Amit Gawande" }),
   order(1008, "delivered", 95, [[3, 0, 2], [9, 0, 1]], { name: "Kavita Bhoyar", paid: "paid" }),
   order(1007, "cancelled", 140, [[17, 0, 1]], { name: "Suresh Raut", reason: "Customer asked to cancel" }),
@@ -145,7 +153,7 @@ function send(res, status, body, headers = {}) {
   res.end(body === undefined ? "" : typeof body === "string" ? body : JSON.stringify(body));
 }
 
-function quote(items, pin) {
+function quote(items, pin, code) {
   const lines = [];
   for (const it of items) {
     const v = variants.find((x) => x.id === it.variant_id);
@@ -156,7 +164,19 @@ function quote(items, pin) {
   if (pin && pin !== "442001") return { ok: false, code: "pincode_unavailable", message: `Sorry, we do not deliver to ${pin} yet.` };
   const sub = lines.reduce((n, l) => n + l.line_total_paise, 0);
   const fee = sub >= 35000 ? 0 : 3000;
-  return { ok: true, lines, subtotal_paise: sub, delivery_fee_paise: fee, base_fee_paise: 3000, total_paise: sub + fee, free_delivery_remaining_paise: Math.max(0, 35000 - sub), below_min_order: false, min_order_paise: null, cod_available: true, upi_available: true, store_open: true, eta_minutes: 30 };
+  let disc = 0, coupon = null, coupon_error = null;
+  if (code) {
+    const c = coupons.find((x) => x.code === code && x.is_active);
+    if (!c) coupon_error = "This coupon code is not valid.";
+    else if (sub < c.min_order_paise) coupon_error = `Add items worth ₹${(c.min_order_paise - sub) / 100} more to use this coupon.`;
+    else {
+      disc = c.kind === "percent" ? Math.floor((sub * c.value) / 100) : c.value;
+      if (c.max_discount_paise) disc = Math.min(disc, c.max_discount_paise);
+      disc = Math.min(disc, sub);
+      coupon = { code: c.code, discount_paise: disc, description: c.description };
+    }
+  }
+  return { ok: true, lines, subtotal_paise: sub, delivery_fee_paise: fee, discount_paise: disc, coupon, coupon_error, base_fee_paise: 3000, total_paise: sub - disc + fee, free_delivery_remaining_paise: Math.max(0, 35000 - sub), below_min_order: false, min_order_paise: null, cod_available: true, upi_available: true, store_open: true, eta_minutes: 30 };
 }
 
 const server = http.createServer(async (req, res) => {
@@ -190,7 +210,7 @@ const server = http.createServer(async (req, res) => {
   // RPC
   if (path.startsWith("/rest/v1/rpc/")) {
     const fn = path.split("/").pop();
-    if (fn === "quote_cart") return send(res, 200, quote(json.p_items ?? [], json.p_pincode));
+    if (fn === "quote_cart") return send(res, 200, quote(json.p_items ?? [], json.p_pincode, json.p_coupon));
     if (fn === "place_order") return send(res, 200, { ok: true, order_no: 1013, public_token: orders[0].public_token, duplicate: false, total_paise: quote(json.p_items ?? [], null).total_paise });
     if (fn === "search_products") {
       const q = String(json.p_q ?? "").toLowerCase();
@@ -227,6 +247,7 @@ const server = http.createServer(async (req, res) => {
         { id: 3, from_status: "confirmed", to_status: "confirmed", note: "Item unavailable: Masala Banana Chips (150 g) x1", created_at: iso(9) },
       ]; break;
       case "banners": rows = []; break;
+      case "coupons": rows = role === "owner" ? coupons : coupons.filter((c) => c.is_active && c.show_in_checkout); break;
       default: rows = [];
     }
     rows = filterRows(rows, [...url.searchParams.entries()].filter(([k]) => !(table === "products" && k === "is_active")));

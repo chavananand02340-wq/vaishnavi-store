@@ -17,7 +17,7 @@ export function FreeDeliveryMeter({ subtotal, dark = false }: { subtotal: number
       <p className={`text-[13px] font-semibold ${dark ? "text-white" : "text-ink"}`}>
         {left > 0 ? `Add ${formatPaise(left)} more for free delivery` : "Free delivery unlocked"}
       </p>
-      <div className={`mt-1 h-1.5 overflow-hidden rounded-full ${dark ? "bg-white/20" : "bg-leaf-100"}`}>
+      <div className={`mt-1 h-1.5 overflow-hidden rounded-full ${dark ? "bg-white/20" : "bg-brand-100"}`}>
         <div
           className="h-full rounded-full bg-haldi-400 transition-[width] duration-500 ease-out"
           style={{ width: `${pct}%` }}
@@ -43,11 +43,11 @@ export function CartBar() {
     <div className="fixed inset-x-0 bottom-0 z-40 px-3 pb-[max(.75rem,env(safe-area-inset-bottom))]">
       <Link
         href="/cart"
-        className="animate-pop mx-auto flex max-w-xl items-center gap-3 rounded-2xl bg-leaf-800 px-3 py-2.5 text-white shadow-[0_10px_30px_-10px_rgba(8,42,27,.7)]"
+        className="animate-pop mx-auto flex max-w-xl items-center gap-3 rounded-2xl bg-brand-800 px-3 py-2.5 text-white shadow-[0_10px_30px_-10px_rgba(8,42,27,.7)]"
       >
         <div className="flex -space-x-3">
           {thumbs.map((l) => (
-            <span key={l.variantId} className="size-10 overflow-hidden rounded-lg border-2 border-leaf-800 bg-white">
+            <span key={l.variantId} className="size-10 overflow-hidden rounded-lg border-2 border-brand-800 bg-white">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               {l.image ? <img src={l.image} alt="" className="size-full object-contain" /> : null}
             </span>
@@ -59,7 +59,7 @@ export function CartBar() {
           </p>
           <FreeDeliveryMeter subtotal={subtotal} dark />
         </div>
-        <span className="flex items-center gap-1 rounded-xl bg-haldi-500 px-3 py-2 text-[15px] font-bold text-leaf-900">
+        <span className="flex items-center gap-1 rounded-xl bg-haldi-500 px-3 py-2 text-[15px] font-bold text-brand-900">
           Cart <Icon name="right" className="size-4" strokeWidth={2.6} />
         </span>
       </Link>

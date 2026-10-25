@@ -46,7 +46,7 @@ function SearchBox() {
         onChange={(e) => setQ(e.target.value)}
         placeholder="Search atta, tel, biscuits…"
         aria-label="Search products"
-        className="w-full rounded-xl bg-white py-3 pl-11 pr-3 text-[16px] text-ink shadow-[0_1px_0_rgba(0,0,0,.06)] outline-none placeholder:text-neutral-400 focus:ring-4 focus:ring-haldi-300"
+        className="w-full rounded-xl border border-line bg-page py-3 pl-11 pr-3 text-[16px] text-ink outline-none placeholder:text-neutral-500 focus:border-brand-600 focus:bg-white focus:ring-4 focus:ring-brand-100"
       />
     </form>
   );
@@ -57,7 +57,7 @@ export function CartButton() {
   return (
     <Link
       href="/cart"
-      className="relative flex h-11 items-center gap-1.5 rounded-xl bg-haldi-500 px-3 font-bold text-leaf-900"
+      className="relative flex h-11 items-center gap-1.5 rounded-xl bg-brand-600 px-3 font-bold text-white"
       aria-label={`Cart, ${count} items`}
     >
       <Icon name="cart" className="size-5" strokeWidth={2.2} />
@@ -73,38 +73,32 @@ export function StoreHeader({ compact = false }: { compact?: boolean }) {
 
   return (
     <>
-      <header className="bg-leaf-700 text-white">
-        <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 pb-3 pt-4">
-          <Link href="/" className="min-w-0 flex-1">
-            <span className={`block truncate font-display font-extrabold leading-none tracking-tight ${compact ? "text-[22px]" : "text-[28px]"}`}>
-              {name}
-            </span>
-            {s && (
-              <span className="mt-1.5 flex items-center gap-1.5 text-[14px] text-white/85">
-                <span className={`size-2 rounded-full ${open === false ? "bg-rose-300" : "bg-haldi-400"}`} aria-hidden />
-                {open === false
-                  ? `Closed now, opens ${formatTime(s.open_time)}`
-                  : `Open till ${formatTime(s.close_time)}, delivery in ${s.default_eta_minutes} min`}
-              </span>
-            )}
+      <header className="bg-white">
+        <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 pb-2 pt-3">
+          <Link href="/" className="shrink-0" aria-label={`${name}, home`}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/logo-compact.png" alt={name} width={403} height={144} className={compact ? "h-9 w-auto" : "h-12 w-auto"} />
           </Link>
+          <div className="min-w-0 flex-1" />
           <CartButton />
         </div>
       </header>
-      <div className="sticky top-0 z-30 bg-leaf-700 pb-3 shadow-[0_6px_12px_-10px_rgba(0,0,0,.5)]">
+      <div className="sticky top-0 z-30 border-b border-line bg-white pb-2.5 pt-1 shadow-[0_8px_16px_-14px_rgba(31,38,48,.5)]">
         <div className="mx-auto max-w-6xl px-4">
-          <Suspense fallback={<div className="h-12 rounded-xl bg-white" />}>
+          <Suspense fallback={<div className="h-12 rounded-xl bg-page" />}>
             <SearchBox />
           </Suspense>
         </div>
       </div>
       {s && !compact && (
-        <div className="bg-haldi-500 text-leaf-900">
-          <p className="mx-auto max-w-6xl px-4 py-2 text-[14px] font-semibold">
-            {s.free_delivery_enabled
-              ? `Free delivery above ${formatPaise(s.free_delivery_threshold_paise)}${s.cod_enabled ? ", cash on delivery" : ""}`
-              : `Delivery ${formatPaise(s.delivery_fee_paise)}${s.cod_enabled ? ", cash on delivery" : ""}`}
-          </p>
+        <div className="bg-haldi-500 text-ink">
+          <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-2 text-[13.5px] font-bold">
+            <span className="flex items-center gap-1.5">
+              <span className={`size-2 rounded-full ${open === false ? "bg-brand-600" : "bg-emerald-600"}`} aria-hidden />
+              {open === false ? `Closed, opens ${formatTime(s.open_time)}` : `Open till ${formatTime(s.close_time)}, ${s.default_eta_minutes} min delivery`}
+            </span>
+            {s.free_delivery_enabled && <span className="shrink-0">Free delivery {formatPaise(s.free_delivery_threshold_paise)}+</span>}
+          </div>
         </div>
       )}
       {s && open === false && (
@@ -116,7 +110,7 @@ export function StoreHeader({ compact = false }: { compact?: boolean }) {
       )}
       {s?.announcement && open !== false && (
         <div className="border-b border-line bg-white">
-          <p className="mx-auto max-w-6xl px-4 py-2 text-[14px] text-leaf-800">{s.announcement}</p>
+          <p className="mx-auto max-w-6xl px-4 py-2 text-[14px] text-brand-800">{s.announcement}</p>
         </div>
       )}
     </>

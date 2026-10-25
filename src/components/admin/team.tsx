@@ -55,7 +55,7 @@ export function TeamProvider({ children, need }: { children: React.ReactNode; ne
   if (!team) {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-page">
-        <span className="size-10 animate-spin rounded-full border-4 border-leaf-100 border-t-leaf-700" aria-label="Loading" />
+        <span className="size-10 animate-spin rounded-full border-4 border-brand-100 border-t-brand-700" aria-label="Loading" />
       </div>
     );
   }

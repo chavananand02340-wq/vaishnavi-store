@@ -23,12 +23,12 @@ export default function CartPage() {
       <>
         <PageBar title="Your cart" />
         <main className="mx-auto flex max-w-3xl flex-col items-center px-6 py-16 text-center">
-          <span className="flex size-20 items-center justify-center rounded-full bg-leaf-50 text-leaf-700">
+          <span className="flex size-20 items-center justify-center rounded-full bg-brand-50 text-brand-700">
             <Icon name="cart" className="size-9" />
           </span>
           <h2 className="mt-4 font-display text-[22px] font-bold">Your cart is empty</h2>
           <p className="mt-1 text-[15px] text-muted">Add atta, dal, oil and daily needs. We'll bring them home.</p>
-          <Link href="/" className="btn-leaf mt-6 px-8">Start shopping</Link>
+          <Link href="/" className="btn-brand mt-6 px-8">Start shopping</Link>
         </main>
       </>
     );
@@ -86,7 +86,7 @@ export default function CartPage() {
           })}
         </ul>
 
-        <Link href="/" className="flex items-center justify-center gap-2 rounded-[var(--radius-card)] border-[1.5px] border-dashed border-leaf-200 bg-white py-3 text-[15px] font-bold text-leaf-700">
+        <Link href="/" className="flex items-center justify-center gap-2 rounded-[var(--radius-card)] border-[1.5px] border-dashed border-brand-200 bg-white py-3 text-[15px] font-bold text-brand-700">
           <Icon name="plus" className="size-4" strokeWidth={2.6} /> Add more items
         </Link>
 

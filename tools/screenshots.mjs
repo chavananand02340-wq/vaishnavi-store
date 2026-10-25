@@ -26,6 +26,7 @@ const laptop = { viewport: { width: 1366, height: 860 }, deviceScaleFactor: 1 };
 // ---------- customer store (phone) ----------
 const store = await browser.newContext(phone);
 await shoot(store, "s01-home", "/");
+await shoot(store, "s01b-home-top", "/", { full: false });
 const cat = await shoot(store, "s02-category", "/c/atta-rice-dal", { full: false });
 // add a couple of items from the category page, then look at cart bar
 await cat.locator("button:has-text('Add')").first().click().catch(() => {});
@@ -42,9 +43,14 @@ await shoot(store, "s07-checkout", "/checkout", {
     await p.fill("#phone", "9876543210").catch(() => {});
     await p.fill("#address", "Flat 203, Sai Residency, Tukum").catch(() => {});
     await p.fill("#pincode", "442001").catch(() => {});
+    await p.waitForTimeout(800);
+    await p.locator("li button:has-text('Apply')").first().click().catch(() => {});
   },
   wait: 1500,
 });
+await shoot(store, "s10-terms", "/terms", { full: false });
+await shoot(store, "s11-refund", "/refund-policy");
+await shoot(store, "s12-footer", "/about");
 await shoot(store, "s08-order", "/order?t=00000000-0000-4000-8000-000000000000&new=1", { wait: 1500 });
 await shoot(store, "s09-login", "/login", { full: false });
 
@@ -70,6 +76,8 @@ await shoot(owner, "a06-categories", "/admin/categories");
 await shoot(owner, "a07-settings", "/admin/settings");
 await shoot(owner, "a08-pincodes", "/admin/pincodes");
 await shoot(owner, "a11-banners", "/admin/banners");
+await shoot(owner, "a12-coupons", "/admin/coupons");
+await shoot(owner, "a13-coupon-new", "/admin/coupons", { before: async (p) => { await p.locator("button:has-text('New')").click().catch(() => {}); await p.fill("#code", "DIWALI10").catch(() => {}); await p.fill("#value", "10").catch(() => {}); await p.fill("#min", "300").catch(() => {}); } });
 await shoot(owner, "a09-orders", "/admin/orders?range=all");
 const more = await shoot(owner, "a10-more-menu", "/admin", { full: false });
 await more.locator("button:has-text('More')").click().catch(() => {});

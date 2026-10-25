@@ -27,10 +27,20 @@ export type PublicSettings = {
   default_eta_minutes: number;
   cod_enabled: boolean;
   upi_enabled: boolean;
+  sale_enabled: boolean;
+  sale_title: string | null;
+  sale_subtitle: string | null;
+  sale_percent: number | null;
+  sale_coupon_code: string | null;
+  sale_theme: "festive" | "red" | "green" | "night";
+  legal_name: string | null;
+  gstin: string | null;
+  fssai_number: string | null;
+  support_email: string | null;
 };
 
 export const SETTINGS_SELECT =
-  "store_name, tagline, address, phone_primary, phone_secondary, whatsapp_number, instagram_url, maps_url, open_time, close_time, accepting_orders, closed_message, announcement, delivery_fee_paise, free_delivery_enabled, free_delivery_threshold_paise, min_order_paise, default_eta_minutes, cod_enabled, upi_enabled";
+  "store_name, tagline, address, phone_primary, phone_secondary, whatsapp_number, instagram_url, maps_url, open_time, close_time, accepting_orders, closed_message, announcement, delivery_fee_paise, free_delivery_enabled, free_delivery_threshold_paise, min_order_paise, default_eta_minutes, cod_enabled, upi_enabled, sale_enabled, sale_title, sale_subtitle, sale_percent, sale_coupon_code, sale_theme, legal_name, gstin, fssai_number, support_email";
 
 export const getSettings = cache(async (): Promise<PublicSettings | null> => {
   const sb = publicSupabase();

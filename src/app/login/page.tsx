@@ -3,7 +3,6 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/browser";
-import { Icon } from "@/components/Icon";
 
 function LoginForm() {
   const router = useRouter();
@@ -65,12 +64,12 @@ function LoginForm() {
             onChange={(e) => setPassword(e.target.value)}
             required
           />
-          <button type="button" onClick={() => setShow((s) => !s)} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-[14px] font-semibold text-leaf-700">
+          <button type="button" onClick={() => setShow((s) => !s)} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-[14px] font-semibold text-brand-700">
             {show ? "Hide" : "Show"}
           </button>
         </div>
       </div>
-      <button type="submit" className="btn-leaf w-full text-[17px]" disabled={busy}>
+      <button type="submit" className="btn-brand w-full text-[17px]" disabled={busy}>
         {busy ? "Signing in…" : "Sign in"}
       </button>
     </form>
@@ -79,13 +78,14 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <main className="flex min-h-dvh flex-col bg-leaf-700">
+    <main className="flex min-h-dvh flex-col bg-brand-700">
       <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-5 py-10">
-        <span className="mb-5 flex size-14 items-center justify-center rounded-2xl bg-haldi-500 text-leaf-900">
-          <Icon name="store" className="size-7" strokeWidth={2.2} />
+        <span className="mb-6 inline-flex self-start rounded-2xl bg-white px-4 py-3 shadow-lg">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/logo.png" alt="Vaishnavi E-Mart" width={800} height={380} className="h-20 w-auto" />
         </span>
-        <h1 className="font-display text-[32px] font-extrabold leading-tight text-white">Vaishnavi Store</h1>
-        <p className="mb-6 mt-1 text-[16px] text-white/80">Owner and counter login</p>
+        <h1 className="font-display text-[28px] font-extrabold leading-tight text-white">Owner and counter login</h1>
+        <p className="mb-6 mt-1 text-[16px] text-white/80">Only for the shop team.</p>
         <Suspense fallback={<div className="h-80 rounded-3xl bg-white" />}>
           <LoginForm />
         </Suspense>

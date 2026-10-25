@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { createClient } from "@supabase/supabase-js";
+import { LEGAL_LINKS } from "@/lib/legal-links";
 
 export const revalidate = 3600;
 
@@ -8,7 +9,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!site) return [];
-  const entries: MetadataRoute.Sitemap = [{ url: site, changeFrequency: "daily", priority: 1 }];
+  const entries: MetadataRoute.Sitemap = [
+    { url: site, changeFrequency: "daily", priority: 1 },
+    ...LEGAL_LINKS.map((l) => ({ url: `${site}${l.href}`, changeFrequency: "monthly" as const, priority: 0.3 })),
+  ];
   if (!url || !key) return entries;
 
   try {
