@@ -280,7 +280,7 @@ export default function CouponsPage() {
           {data.map((c) => <CouponRow key={c.id} c={c} onChanged={reload} />)}
         </ul>
       )}
-      <p className="text-[13px] text-muted">Tip: to show a coupon on the big home banner, pick it in Shop settings → Sale banner. Ends at 11:59 pm on the last day.</p>
+      <p className="text-[13px] text-muted">Tip: to show a coupon on the big home banner, pick it in Banners → Home offer banner. Ends at 11:59 pm on the last day.</p>
     </div>
   );
 }

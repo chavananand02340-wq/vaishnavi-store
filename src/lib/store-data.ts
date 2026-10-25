@@ -32,6 +32,8 @@ export type PublicSettings = {
   sale_subtitle: string | null;
   sale_percent: number | null;
   sale_coupon_code: string | null;
+  sale_image_path?: string | null;
+  sale_link_url?: string | null;
   sale_theme: "festive" | "red" | "green" | "night";
   legal_name: string | null;
   gstin: string | null;
@@ -40,12 +42,17 @@ export type PublicSettings = {
 };
 
 export const SETTINGS_SELECT =
-  "store_name, tagline, address, phone_primary, phone_secondary, whatsapp_number, instagram_url, maps_url, open_time, close_time, accepting_orders, closed_message, announcement, delivery_fee_paise, free_delivery_enabled, free_delivery_threshold_paise, min_order_paise, default_eta_minutes, cod_enabled, upi_enabled, sale_enabled, sale_title, sale_subtitle, sale_percent, sale_coupon_code, sale_theme, legal_name, gstin, fssai_number, support_email";
+  "store_name, tagline, address, phone_primary, phone_secondary, whatsapp_number, instagram_url, maps_url, open_time, close_time, accepting_orders, closed_message, announcement, delivery_fee_paise, free_delivery_enabled, free_delivery_threshold_paise, min_order_paise, default_eta_minutes, cod_enabled, upi_enabled, sale_enabled, sale_title, sale_subtitle, sale_percent, sale_coupon_code, sale_theme, sale_image_path, sale_link_url, legal_name, gstin, fssai_number, support_email";
 
 export const getSettings = cache(async (): Promise<PublicSettings | null> => {
   const sb = publicSupabase();
   if (!sb) return null;
-  const { data } = await sb.from("store_settings").select(SETTINGS_SELECT).eq("id", 1).maybeSingle();
+  const { data, error } = await sb.from("store_settings").select(SETTINGS_SELECT).eq("id", 1).maybeSingle();
+  if (error) {
+    // A newer column may not exist yet (SQL part not run): fall back to all columns.
+    const { data: all } = await sb.from("store_settings").select("*").eq("id", 1).maybeSingle();
+    return (all as unknown as PublicSettings) ?? null;
+  }
   return (data as unknown as PublicSettings) ?? null;
 });
 

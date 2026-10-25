@@ -9,6 +9,7 @@ import { refreshStorefront } from "@/components/admin/team";
 import { Card, CardTitle, Empty, ErrorBox, PageTitle, Spinner, Switch } from "@/components/admin/ui";
 import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/Toast";
+import { OfferBannerEditor } from "@/components/admin/OfferBannerEditor";
 
 type Banner = { id: string; image_path: string; link_url: string | null; alt_text: string | null; sort_order: number; is_active: boolean };
 
@@ -120,9 +121,14 @@ export default function BannersPage() {
 
   return (
     <div className="space-y-4">
-      <PageTitle title="Home banners" hue="banners" icon="gift" />
+      <PageTitle title="Banners" hue="banners" icon="gift" />
+      <OfferBannerEditor />
+
+      <h2 className="flex items-center gap-2 pt-3 font-display text-[20px] font-bold">
+        <span className="h-6 w-1.5 rounded-full bg-orange-500" aria-hidden /> Home page banners (sliding)
+      </h2>
       <Card>
-        <CardTitle hint="Wide pictures work best (2:1, like 1600 × 800). Make them in Canva with your offer written big.">Add a banner</CardTitle>
+        <CardTitle hint="These slide one after another, below the categories. Wide pictures work best (2:1, like 1600 × 800). Make them in Canva with your offer written big.">Add a sliding banner</CardTitle>
         <input ref={input} type="file" accept="image/*" className="hidden" onChange={(e) => upload(e.target.files)} />
         <button type="button" disabled={busy} onClick={() => input.current?.click()} className="flex w-full flex-col items-center gap-1 rounded-2xl border-2 border-dashed border-orange-300 bg-orange-50 py-6 text-orange-900">
           <Icon name="camera" className="size-8" />

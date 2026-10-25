@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { PublicSettings } from "@/lib/store-data";
 import { Icon } from "@/components/Icon";
+import { imageUrl } from "@/lib/catalog";
 
 export const COUPON_KEY = "vs-coupon";
 
@@ -38,6 +39,33 @@ export function SaleHero({ s, productImages }: { s: PublicSettings | null; produ
       /* ignore */
     }
     setCopied(true);
+  }
+
+  const picture = sale && s?.sale_image_path ? imageUrl(s.sale_image_path) : null;
+  if (picture) {
+    const img = (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={picture} alt={title + (pct ? `, ${pct}% off` : "")} className="aspect-[2/1] w-full object-cover" fetchPriority="high" />
+    );
+    return (
+      <section aria-label={title} className="space-y-2">
+        <div className="relative overflow-hidden rounded-[22px] bg-white shadow-[0_14px_30px_-18px_rgba(0,0,0,.45)]">
+          {s?.sale_link_url ? <a href={s.sale_link_url}>{img}</a> : img}
+          {pct ? (
+            <span className="pointer-events-none absolute right-3 top-3 flex size-[76px] rotate-[8deg] flex-col items-center justify-center rounded-full bg-kumkum-600 text-white shadow-lg ring-4 ring-white/90 sm:size-28" aria-hidden>
+              <span className="font-display text-[26px] font-extrabold leading-none sm:text-[40px]">{pct}%</span>
+              <span className="text-[13px] font-extrabold leading-none tracking-wide sm:text-[18px]">OFF</span>
+            </span>
+          ) : null}
+        </div>
+        {code && (
+          <button type="button" onClick={useCode} className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-brand-600 bg-brand-50 px-4 py-2.5 text-[15px] font-extrabold text-brand-700">
+            {copied ? <Icon name="check" className="size-4" strokeWidth={3} /> : <Icon name="tag" className="size-4" strokeWidth={2.4} />}
+            {copied ? `${code} will apply at checkout` : `Tap to use code ${code}`}
+          </button>
+        )}
+      </section>
+    );
   }
 
   return (

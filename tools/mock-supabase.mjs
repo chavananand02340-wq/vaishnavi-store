@@ -13,8 +13,8 @@ const settings = {
   timezone: "Asia/Kolkata", open_time: "00:00:00", close_time: "23:59:00", accepting_orders: true, closed_message: null, announcement: null,
   delivery_fee_paise: 3000, free_delivery_enabled: true, free_delivery_threshold_paise: 35000, min_order_paise: null, default_eta_minutes: 30,
   cod_enabled: true, upi_enabled: true, upi_id: "vaishnavistore@okaxis", upi_payee_name: "Vaishnavi Store", low_stock_threshold: 5,
-  sale_enabled: true, sale_title: "Diwali Sale", sale_subtitle: "On sweets, dry fruits and pooja items. Till 3 Nov.", sale_percent: 10,
-  sale_coupon_code: "DIWALI10", sale_theme: "festive", legal_name: "Vaishnavi Store (Prop. Sangita Shiwarkar)", gstin: null,
+  sale_enabled: true, sale_title: "Diwali Sale", sale_subtitle: "On sweets, dry fruits and pooja items. Till 3 Nov.", sale_percent: 20,
+  sale_coupon_code: "DIWALI10", sale_theme: "festive", sale_image_path: null, sale_link_url: null, legal_name: "Vaishnavi Store (Prop. Sangita Shiwarkar)", gstin: null,
   fssai_number: "21524000000000", support_email: "vaishnavistore.web@gmail.com", notify_email: "vaishnavistore.web@gmail.com",
 };
 const coupons = [
