@@ -12,6 +12,7 @@ import { useAsync } from "@/lib/useAsync";
 import { useCart } from "@/components/store/cart";
 import { PageBar } from "@/components/store/PageBar";
 import { Icon } from "@/components/Icon";
+import { WaIcon } from "@/components/WaIcon";
 
 type OrderView = {
   order_no: number;
@@ -150,8 +151,8 @@ function OrderInner() {
 
       <section className="grid grid-cols-2 gap-2">
         {wa && (
-          <a href={wa} rel="noopener" className="btn-brand">
-            <Icon name="chat" /> WhatsApp shop
+          <a href={wa} rel="noopener" className="btn bg-[#25d366] text-[#073b20]">
+            <WaIcon /> WhatsApp shop
           </a>
         )}
         {s?.phone_primary && (
