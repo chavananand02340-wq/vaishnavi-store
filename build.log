@@ -1,0 +1,68 @@
+
+> vaishnavi-store@0.1.0 build
+> next build
+
+⚠ No build cache found. Please configure build caching for faster rebuilds. Read more: https://nextjs.org/docs/messages/no-cache
+   ▲ Next.js 15.5.28
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 10.3s
+   Skipping linting
+   Checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/41) ...
+   Generating static pages (10/41) 
+   Generating static pages (20/41) 
+   Generating static pages (30/41) 
+ ✓ Generating static pages (41/41)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                 Size  First Load JS  Revalidate  Expire
+┌ ○ /                                    2.55 kB         186 kB          1m      1y
+├ ○ /_not-found                            148 B         103 kB
+├ ○ /about                               4.78 kB         111 kB          1m      1y
+├ ○ /admin                               3.39 kB         182 kB
+├ ○ /admin/banners                       5.91 kB         184 kB
+├ ○ /admin/categories                    4.04 kB         182 kB
+├ ○ /admin/coupons                       7.36 kB         181 kB
+├ ○ /admin/order                         4.68 kB         183 kB
+├ ○ /admin/orders                        5.99 kB         180 kB
+├ ○ /admin/pincodes                       2.6 kB         181 kB
+├ ○ /admin/products                      3.95 kB         182 kB
+├ ○ /admin/products/edit                 6.71 kB         185 kB
+├ ○ /admin/products/new                  3.88 kB         182 kB
+├ ○ /admin/settings                      4.54 kB         183 kB
+├ ƒ /api/order-email                       148 B         103 kB
+├ ƒ /api/revalidate                        148 B         103 kB
+├ ● /c/[slug]                              185 B         112 kB          1m      1y
+├   ├ /c/atta-rice-dal                                                   1m      1y
+├   ├ /c/oil-ghee                                                        1m      1y
+├   ├ /c/masala-spices                                                   1m      1y
+├   └ [+5 more paths]
+├ ○ /cart                                4.04 kB         184 kB          1m      1y
+├ ○ /checkout                             8.4 kB         186 kB          1m      1y
+├ ○ /contact                             4.79 kB         111 kB          1m      1y
+├ ○ /icon.png                                0 B            0 B
+├ ○ /login                               1.72 kB         172 kB
+├ ○ /manifest.webmanifest                  148 B         103 kB
+├ ○ /order                               16.8 kB         191 kB          1m      1y
+├ ● /p/[id]                               3.3 kB         116 kB
+├ ○ /privacy                             4.79 kB         111 kB          1m      1y
+├ ○ /refund-policy                       4.79 kB         111 kB          1m      1y
+├ ○ /robots.txt                            148 B         103 kB
+├ ○ /search                              2.22 kB         182 kB          1m      1y
+├ ○ /shipping-policy                     4.79 kB         111 kB          1m      1y
+├ ○ /sitemap.xml                           148 B         103 kB          1h      1y
+├ ○ /staff                               2.76 kB         185 kB
+└ ○ /terms                               4.78 kB         111 kB          1m      1y
++ First Load JS shared by all             103 kB
+  ├ chunks/1255-dc3ddf72a1dc71a7.js      46.6 kB
+  ├ chunks/4bd1b696-f785427dddbba9fb.js  54.2 kB
+  └ other shared chunks (total)          1.93 kB
+
+
+○  (Static)   prerendered as static content
+●  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ƒ  (Dynamic)  server-rendered on demand
+
