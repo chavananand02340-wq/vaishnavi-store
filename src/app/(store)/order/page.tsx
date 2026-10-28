@@ -170,6 +170,8 @@ function UpiBox({ token, total, orderNo, waiting, onSent }: { token: string; tot
   const { settings } = useCart();
   const [qr, setQr] = useState<string | null>(null);
   const [link, setLink] = useState<string | null>(null);
+  const [vpa, setVpa] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const [utr, setUtr] = useState("");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -187,7 +189,8 @@ function UpiBox({ token, total, orderNo, waiting, onSent }: { token: string; tot
       });
       const l = `upi://pay?${p.toString().replace(/\+/g, "%20")}`;
       setLink(l);
-      setQr(await QRCode.toDataURL(l, { margin: 1, width: 260, errorCorrectionLevel: "M" }));
+      setVpa(data.upi_id as string);
+      setQr(await QRCode.toDataURL(l, { margin: 2, width: 600, errorCorrectionLevel: "M" }));
     })();
   }, [total, orderNo, settings?.store_name]);
 
@@ -208,8 +211,34 @@ function UpiBox({ token, total, orderNo, waiting, onSent }: { token: string; tot
         <>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={qr} alt={`UPI QR code for ${formatPaise(total)}`} className="mx-auto my-3 size-60" />
-          <a href={link!} className="btn-brand w-full">Pay with GPay, PhonePe or Paytm</a>
-          <p className="mt-2 text-[13px] text-muted">Amount and order number are already filled in.</p>
+          <p className="text-[13px] text-muted">Amount {formatPaise(total)} and order number are already in the QR.</p>
+
+          <ol className="mt-4 space-y-2 rounded-2xl bg-page p-3 text-left text-[14px] leading-snug">
+            <li><b>1.</b> Tap <b>Save QR</b> below.</li>
+            <li><b>2.</b> Open GPay, PhonePe or Paytm → <b>Scan QR</b> → pick the saved photo from your gallery.</li>
+            <li><b>3.</b> Pay {formatPaise(total)}. On another phone? Just scan the QR on this screen.</li>
+          </ol>
+
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <a href={qr} download={`pay-${orderNo.replace(/\W/g, "")}.png`} className="btn-brand">Save QR</a>
+            <button
+              type="button"
+              className="btn-plain"
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(vpa ?? "");
+                  setCopied(true);
+                } catch {
+                  /* ignore */
+                }
+              }}
+            >
+              {copied ? "UPI ID copied" : "Copy UPI ID"}
+            </button>
+          </div>
+          {vpa && <p className="mt-2 text-[13px] text-muted">UPI ID: <b className="text-ink">{vpa}</b></p>}
+          <a href={link!} className="mt-3 inline-block text-[14px] font-semibold text-brand-700 underline">Or try opening your UPI app directly</a>
+          <p className="mt-1 text-[12px] text-muted">If your app shows a &quot;payment may fail&quot; alert, use Save QR instead.</p>
         </>
       ) : (
         <p className="mt-2 text-[15px] text-muted">UPI isn't set up yet. Please pay cash on delivery.</p>
