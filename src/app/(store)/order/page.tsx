@@ -13,7 +13,6 @@ import { useCart } from "@/components/store/cart";
 import { PageBar } from "@/components/store/PageBar";
 import { Icon } from "@/components/Icon";
 import { WaIcon } from "@/components/WaIcon";
-import { WaIcon } from "@/components/WaIcon";
 
 type OrderView = {
   order_no: number;
