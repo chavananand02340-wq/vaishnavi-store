@@ -13,6 +13,7 @@ import { useCart } from "@/components/store/cart";
 import { PageBar } from "@/components/store/PageBar";
 import { Icon } from "@/components/Icon";
 import { WaIcon } from "@/components/WaIcon";
+import { WaIcon } from "@/components/WaIcon";
 
 type OrderView = {
   order_no: number;
@@ -170,7 +171,6 @@ function OrderInner() {
 function UpiBox({ token, total, orderNo, waiting, onSent }: { token: string; total: number; orderNo: string; waiting: boolean; onSent: () => void }) {
   const { settings } = useCart();
   const [qr, setQr] = useState<string | null>(null);
-  const [link, setLink] = useState<string | null>(null);
   const [vpa, setVpa] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [utr, setUtr] = useState("");
@@ -189,7 +189,6 @@ function UpiBox({ token, total, orderNo, waiting, onSent }: { token: string; tot
         tn: orderNo,
       });
       const l = `upi://pay?${p.toString().replace(/\+/g, "%20")}`;
-      setLink(l);
       setVpa(data.upi_id as string);
       setQr(await QRCode.toDataURL(l, { margin: 2, width: 600, errorCorrectionLevel: "M" }));
     })();
@@ -238,8 +237,6 @@ function UpiBox({ token, total, orderNo, waiting, onSent }: { token: string; tot
             </button>
           </div>
           {vpa && <p className="mt-2 text-[13px] text-muted">UPI ID: <b className="text-ink">{vpa}</b></p>}
-          <a href={link!} className="mt-3 inline-block text-[14px] font-semibold text-brand-700 underline">Or try opening your UPI app directly</a>
-          <p className="mt-1 text-[12px] text-muted">If your app shows a &quot;payment may fail&quot; alert, use Save QR instead.</p>
         </>
       ) : (
         <p className="mt-2 text-[15px] text-muted">UPI isn't set up yet. Please pay cash on delivery.</p>
