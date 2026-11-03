@@ -7,6 +7,7 @@ import { formatPaise } from "@/lib/money";
 import { istTime } from "@/lib/hours";
 import { Icon } from "@/components/Icon";
 import { WaIcon } from "@/components/WaIcon";
+import { requestOrderEmail } from "@/lib/checkout";
 import { useToast } from "@/components/Toast";
 import { STATUS, StatusPill } from "./ui";
 
@@ -96,6 +97,7 @@ export function OrderCard({
       return;
     }
     toast(ok);
+    if (fn === "update_order_status" && args.p_to === "confirmed") requestOrderEmail(o.public_token, "packing");
     onChanged();
   }
 

@@ -140,6 +140,19 @@ select public_token as ctok from public.orders where coupon_code = 'DIWALI10' \g
 set role anon;
 select pg_temp.check(public.order_for_notify(:'ctok', :'sec') ->> 'phone' = '9123456780', 'notify returns order once with secret');
 select pg_temp.check(public.order_for_notify(:'ctok', :'sec') is null, 'notify does not repeat');
+select pg_temp.check(public.order_for_packing_email(:'ctok', :'sec') is null, 'no packing email before accepted');
+reset role;
+update public.orders set customer_email = 'meena@example.com' where public_token = :'ctok';
+set role authenticated;
+set request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+select pg_temp.check((public.update_order_status((select id from public.orders where public_token = :'ctok'), 'confirmed', null, 25) ->> 'ok')::boolean, 'owner accepts order');
+reset role;
+set role anon;
+set request.jwt.claim.sub = '';
+select pg_temp.check(public.order_for_packing_email(:'ctok', 'wrong') is null, 'packing email needs the secret');
+select public.order_for_packing_email(:'ctok', :'sec') as pk \gset
+select pg_temp.check((:'pk')::jsonb ->> 'email' = 'meena@example.com' and (:'pk')::jsonb -> 'items' -> 0 ->> 'unit_price_paise' is not null, 'packing email details once, with unit prices');
+select pg_temp.check(public.order_for_packing_email(:'ctok', :'sec') is null, 'packing email does not repeat');
 reset role;
 set role authenticated;
 set request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';

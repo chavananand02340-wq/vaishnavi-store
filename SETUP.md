@@ -102,3 +102,9 @@ Domain verify hone tak Resend sirf aapke Resend account wali email par bhejta ha
 | Order button disabled | Store closed (timing/switch) ya PIN code list mein nahi |
 | Counter par awaaz nahi | "Start shift" dabaya? Phone silent/DND? App background mein to nahi? |
 | Photo upload fail | Internet check karo; 6 photos se zyada nahi ho sakti |
+
+### Order emails (3)
+1. Customer: "Order received" (when they order, only if they gave an email)
+2. Owner: "New order" (to Shop settings → Order emails)
+3. Customer: "We're packing your order" (when admin/counter taps Accept)
+Needs SQL part 23 once.

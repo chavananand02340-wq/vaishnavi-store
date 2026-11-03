@@ -93,9 +93,9 @@ export async function placeOrder(d: PlaceOrderInput): Promise<PlaceOrderResult> 
 }
 
 /** Ask the website server to send the "new order" email (fire and forget). */
-export function requestOrderEmail(token: string) {
+export function requestOrderEmail(token: string, event: "placed" | "packing" = "placed") {
   try {
-    void fetch("/api/order-email", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ token }), keepalive: true });
+    void fetch("/api/order-email", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ token, event }), keepalive: true });
   } catch {
     /* email is a nice-to-have; the order is already saved */
   }
