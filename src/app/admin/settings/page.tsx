@@ -14,7 +14,7 @@ type S = {
   whatsapp_number: string | null; email: string | null; instagram_url: string | null; maps_url: string | null;
   open_time: string; close_time: string; accepting_orders: boolean; closed_message: string | null; announcement: string | null;
   delivery_fee_paise: number; free_delivery_enabled: boolean; free_delivery_threshold_paise: number; min_order_paise: number | null;
-  default_eta_minutes: number; cod_enabled: boolean; upi_enabled: boolean; upi_id: string | null; upi_payee_name: string | null; low_stock_threshold: number;
+  default_eta_minutes: number; cod_enabled: boolean; upi_enabled: boolean; upi_id: string | null; upi_payee_name: string | null; low_stock_threshold: number; razorpay_enabled?: boolean;
   legal_name: string | null; gstin: string | null; fssai_number: string | null; support_email: string | null; notify_email: string | null;
 };
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -24,7 +24,7 @@ type F = Record<
   "open_time" | "close_time" | "closed_message" | "announcement" | "delivery_fee" | "threshold" | "min_order" | "eta" | "upi_id" | "upi_payee_name" | "low_stock" |
   "legal_name" | "gstin" | "fssai_number" | "support_email" | "notify_email",
   string
-> & { accepting_orders: boolean; free_delivery_enabled: boolean; cod_enabled: boolean; upi_enabled: boolean };
+> & { accepting_orders: boolean; free_delivery_enabled: boolean; cod_enabled: boolean; upi_enabled: boolean; razorpay_enabled: boolean };
 
 const toForm = (s: S): F => ({
   store_name: s.store_name, tagline: s.tagline ?? "", address: s.address ?? "", phone_primary: s.phone_primary ?? "", phone_secondary: s.phone_secondary ?? "",
@@ -32,7 +32,7 @@ const toForm = (s: S): F => ({
   open_time: s.open_time.slice(0, 5), close_time: s.close_time.slice(0, 5), closed_message: s.closed_message ?? "", announcement: s.announcement ?? "",
   delivery_fee: paiseToRupeesInput(s.delivery_fee_paise), threshold: paiseToRupeesInput(s.free_delivery_threshold_paise), min_order: paiseToRupeesInput(s.min_order_paise),
   eta: String(s.default_eta_minutes), upi_id: s.upi_id ?? "", upi_payee_name: s.upi_payee_name ?? "", low_stock: String(s.low_stock_threshold),
-  accepting_orders: s.accepting_orders, free_delivery_enabled: s.free_delivery_enabled, cod_enabled: s.cod_enabled, upi_enabled: s.upi_enabled,
+  accepting_orders: s.accepting_orders, free_delivery_enabled: s.free_delivery_enabled, cod_enabled: s.cod_enabled, upi_enabled: s.upi_enabled, razorpay_enabled: s.razorpay_enabled ?? false,
   legal_name: s.legal_name ?? "", gstin: s.gstin ?? "", fssai_number: s.fssai_number ?? "", support_email: s.support_email ?? "", notify_email: s.notify_email ?? "",
 });
 
@@ -72,7 +72,7 @@ export default function SettingsPage() {
   const dirty = JSON.stringify(f) !== JSON.stringify(toForm(data));
 
   async function save() {
-    if (!f) return;
+    if (!f || !data) return;
     const fee = rupeesToPaise(f.delivery_fee);
     const threshold = rupeesToPaise(f.threshold);
     const minOrder = f.min_order.trim() ? rupeesToPaise(f.min_order) : null;
@@ -104,6 +104,7 @@ export default function SettingsPage() {
         delivery_fee_paise: fee, free_delivery_enabled: f.free_delivery_enabled, free_delivery_threshold_paise: threshold, min_order_paise: minOrder,
         default_eta_minutes: eta, cod_enabled: f.cod_enabled, upi_enabled: f.upi_enabled, upi_id: f.upi_id.trim() || null, upi_payee_name: f.upi_payee_name.trim() || null,
         low_stock_threshold: low,
+        ...("razorpay_enabled" in data ? { razorpay_enabled: f.razorpay_enabled } : {}),
         legal_name: f.legal_name.trim() || null, gstin: f.gstin.trim().toUpperCase() || null, fssai_number: f.fssai_number.trim() || null,
         support_email: f.support_email.trim() || null, notify_email: f.notify_email.trim() || null,
       })
@@ -158,8 +159,15 @@ export default function SettingsPage() {
           </Section>
 
           <Section icon="rupee" color="bg-emerald-600 text-white" title="Payment">
+            <Switch
+              checked={f.razorpay_enabled}
+              disabled={!("razorpay_enabled" in data)}
+              onChange={(x) => setF({ ...f, razorpay_enabled: x })}
+              label="Online payment (Razorpay)"
+              hint={"razorpay_enabled" in data ? "UPI apps, cards, netbanking. Marked paid automatically." : "Run SQL parts 24 and 25 first."}
+            />
             <Switch checked={f.cod_enabled} onChange={(x) => setF({ ...f, cod_enabled: x })} label="Cash on delivery" hint="Allowed on every order amount while on." />
-            <Switch checked={f.upi_enabled} onChange={(x) => setF({ ...f, upi_enabled: x })} label="UPI QR payment" hint="Customer pays by QR. You confirm it in your UPI app." />
+            <Switch checked={f.upi_enabled} onChange={(x) => setF({ ...f, upi_enabled: x })} label="UPI QR payment (old way)" hint="Customer scans your QR. You confirm it in your UPI app. Turn off once Razorpay is on." />
             <div className="grid grid-cols-2 gap-3">
               <Field id="upi" label="UPI ID" value={f.upi_id} onChange={set("upi_id")} placeholder="shop@okaxis" autoCapitalize="none" />
               <Field id="upin" label="Name on UPI" value={f.upi_payee_name} onChange={set("upi_payee_name")} maxLength={80} />

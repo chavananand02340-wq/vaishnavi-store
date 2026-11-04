@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { supabase } from "@/lib/supabase/browser";
 import { formatPaise } from "@/lib/money";
@@ -20,7 +20,7 @@ type OrderView = {
   created_at: string;
   confirmed_at: string | null;
   eta_minutes: number | null;
-  payment_method: "cod" | "upi";
+  payment_method: "cod" | "upi" | "online";
   payment_status: "unpaid" | "awaiting_verification" | "paid";
   subtotal_paise: number;
   delivery_fee_paise: number;
@@ -117,6 +117,10 @@ function OrderInner() {
         </ol>
       )}
 
+      {o.payment_method === "online" && o.status !== "cancelled" && (
+        <OnlinePayBox token={token} total={o.total_paise} paid={o.payment_status === "paid"} autoOpen={params.get("pay") === "1"} onPaid={reload} />
+      )}
+
       {o.payment_method === "upi" && o.payment_status !== "paid" && o.status !== "cancelled" && (
         <UpiBox token={token} total={o.total_paise} orderNo={no} waiting={o.payment_status === "awaiting_verification"} onSent={reload} />
       )}
@@ -142,8 +146,8 @@ function OrderInner() {
           <div className="flex justify-between text-muted">
             <dt>Payment</dt>
             <dd>
-              {o.payment_method === "cod" ? "Cash on delivery" : "UPI"},{" "}
-              {o.payment_status === "paid" ? "paid" : o.payment_status === "awaiting_verification" ? "being checked" : "pay on delivery"}
+              {o.payment_method === "cod" ? "Cash on delivery" : o.payment_method === "online" ? "Online" : "UPI"},{" "}
+              {o.payment_status === "paid" ? "paid" : o.payment_status === "awaiting_verification" ? "being checked" : o.payment_method === "online" ? "not paid yet" : "pay on delivery"}
             </dd>
           </div>
         </dl>
@@ -249,6 +253,104 @@ function UpiBox({ token, total, orderNo, waiting, onSent }: { token: string; tot
         </div>
         {msg && <p className={`mt-2 text-[14px] ${msg.ok ? "text-brand-700" : "text-rose-700"}`}>{msg.text}</p>}
       </form>
+    </section>
+  );
+}
+
+type RzpResponse = { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string };
+type RzpInstance = { open: () => void; on: (e: string, f: (r: { error?: { description?: string } }) => void) => void };
+declare global {
+  interface Window {
+    Razorpay?: new (opts: Record<string, unknown>) => RzpInstance;
+  }
+}
+
+function loadRazorpay(): Promise<boolean> {
+  if (typeof window === "undefined") return Promise.resolve(false);
+  if (window.Razorpay) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    const sc = document.createElement("script");
+    sc.src = "https://checkout.razorpay.com/v1/checkout.js";
+    sc.onload = () => resolve(true);
+    sc.onerror = () => resolve(false);
+    document.body.appendChild(sc);
+  });
+}
+
+function OnlinePayBox({ token, total, paid, autoOpen, onPaid }: { token: string; total: number; paid: boolean; autoOpen: boolean; onPaid: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const started = useRef(false);
+
+  async function pay() {
+    setBusy(true);
+    setMsg(null);
+    const ok = await loadRazorpay();
+    if (!ok || !window.Razorpay) {
+      setBusy(false);
+      return setMsg({ ok: false, text: "Couldn't load the payment page. Check your internet and try again." });
+    }
+    const r = (await fetch("/api/razorpay/order", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ token }) })
+      .then((x) => x.json())
+      .catch(() => null)) as null | { ok: boolean; paid?: boolean; message?: string; key: string; order_id: string; amount: number; name: string; description: string; prefill: Record<string, string> };
+    if (!r?.ok) {
+      setBusy(false);
+      if (r?.paid) return onPaid();
+      return setMsg({ ok: false, text: r?.message ?? "Couldn't start payment. Try again." });
+    }
+    const rzp = new window.Razorpay({
+      key: r.key,
+      order_id: r.order_id,
+      amount: r.amount,
+      currency: "INR",
+      name: r.name,
+      description: r.description,
+      image: `${window.location.origin}/icons/icon-192.png`,
+      prefill: r.prefill,
+      theme: { color: "#e30613" },
+      modal: { ondismiss: () => setBusy(false) },
+      handler: async (resp: RzpResponse) => {
+        setMsg({ ok: true, text: "Payment received. Confirming…" });
+        const v = (await fetch("/api/razorpay/verify", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(resp) })
+          .then((x) => x.json())
+          .catch(() => null)) as null | { ok: boolean; message?: string };
+        setBusy(false);
+        setMsg(v?.ok ? { ok: true, text: "Paid! Thank you. The shop is preparing your order." } : { ok: false, text: v?.message ?? "We got your payment but couldn't confirm it yet. The shop will check it." });
+        onPaid();
+      },
+    });
+    rzp.on("payment.failed", (e) => {
+      setBusy(false);
+      setMsg({ ok: false, text: `Payment failed: ${e.error?.description ?? "please try again"}. No money was taken, or it will be refunded automatically.` });
+    });
+    rzp.open();
+  }
+
+  useEffect(() => {
+    if (autoOpen && !paid && !started.current) {
+      started.current = true;
+      void pay();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoOpen, paid]);
+
+  if (paid) {
+    return (
+      <section className="flex items-center gap-3 rounded-[var(--radius-card)] bg-emerald-50 p-4 text-emerald-900 ring-1 ring-emerald-200">
+        <Icon name="check" className="size-6 shrink-0" strokeWidth={3} />
+        <p className="text-[15px] font-bold">Paid online, {formatPaise(total)}. Thank you!</p>
+      </section>
+    );
+  }
+  return (
+    <section className="rounded-[var(--radius-card)] bg-white p-4 text-center ring-1 ring-line">
+      <h2 className="text-[17px] font-bold">Pay {formatPaise(total)} online</h2>
+      <p className="mt-1 text-[14px] text-muted">UPI, cards or netbanking. Your order is saved; it goes ahead once you pay.</p>
+      <button type="button" onClick={pay} disabled={busy} className="btn-haldi mt-3 w-full text-[17px]">
+        {busy ? "Opening payment…" : `Pay ${formatPaise(total)} now`}
+      </button>
+      {msg && <p className={`mt-2 text-[14px] font-semibold ${msg.ok ? "text-emerald-700" : "text-rose-700"}`}>{msg.text}</p>}
+      <p className="mt-2 text-[12px] text-muted">Secure payment by Razorpay</p>
     </section>
   );
 }

@@ -46,7 +46,7 @@ export default function CheckoutPage() {
   const router = useRouter();
   const { ready, lines, clear } = useCart();
   const [d, setD] = useState<Details>(EMPTY);
-  const [payment, setPayment] = useState<"cod" | "upi">("cod");
+  const [payment, setPayment] = useState<"cod" | "upi" | "online">("cod");
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -72,9 +72,10 @@ export default function CheckoutPage() {
   const q: Quote | null = quote?.ok ? quote : null;
 
   useEffect(() => {
-    if (q && !q.cod_available && q.upi_available) setPayment("upi");
-    if (q && q.cod_available && !q.upi_available) setPayment("cod");
-  }, [q?.cod_available, q?.upi_available]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!q) return;
+    const on = { cod: q.cod_available, upi: q.upi_available, online: Boolean(q.online_available) };
+    if (!on[payment]) setPayment(on.online ? "online" : on.cod ? "cod" : on.upi ? "upi" : payment);
+  }, [q?.cod_available, q?.upi_available, q?.online_available]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function saveCoupon(c: string | null) {
     setCoupon(c);
@@ -115,7 +116,7 @@ export default function CheckoutPage() {
   };
   const pinError = quote && !quote.ok && quote.code === "pincode_unavailable" ? quote.message : null;
   const hasErrors = Object.values(errs).some(Boolean);
-  const canSubmit = Boolean(q && q.store_open && !q.below_min_order && (q.cod_available || q.upi_available)) && !submitting && !loading;
+  const canSubmit = Boolean(q && q.store_open && !q.below_min_order && (q.cod_available || q.upi_available || q.online_available)) && !submitting && !loading;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -150,9 +151,9 @@ export default function CheckoutPage() {
       } catch {
         /* ignore */
       }
-      if (!res.duplicate) requestOrderEmail(res.public_token);
+      if (!res.duplicate && payment !== "online") requestOrderEmail(res.public_token);
       clear();
-      router.replace(`/order?t=${res.public_token}&new=1`);
+      router.replace(`/order?t=${res.public_token}&new=1${payment === "online" ? "&pay=1" : ""}`);
       return;
     }
     if (res.code === "price_changed" && res.quote) {
@@ -219,13 +220,21 @@ export default function CheckoutPage() {
           <h2 className="mb-1 flex items-center gap-2 text-[17px] font-bold">
             <Icon name="rupee" className="size-5 text-brand-700" /> How will you pay?
           </h2>
+          {q?.online_available && (
+            <PayOption
+              checked={payment === "online"}
+              onSelect={() => setPayment("online")}
+              title="Pay online"
+              text="UPI (GPay, PhonePe, Paytm), cards or netbanking. Secure payment by Razorpay."
+            />
+          )}
           {(q?.cod_available ?? true) && (
             <PayOption checked={payment === "cod"} onSelect={() => setPayment("cod")} title="Cash on delivery" text="Pay cash or UPI to the delivery person." />
           )}
           {q?.upi_available && (
             <PayOption checked={payment === "upi"} onSelect={() => setPayment("upi")} title="Pay now with UPI" text="Scan a QR on the next screen. The shop confirms your payment." />
           )}
-          {q && !q.cod_available && !q.upi_available && <p className="text-[15px] text-rose-700">Online payment is off right now. Please call the shop.</p>}
+          {q && !q.cod_available && !q.upi_available && !q.online_available && <p className="text-[15px] text-rose-700">Online payment is off right now. Please call the shop.</p>}
         </section>
 
         <section className="rounded-[var(--radius-card)] bg-white p-4 ring-1 ring-line">
@@ -264,7 +273,7 @@ export default function CheckoutPage() {
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-white px-3 pb-[max(.75rem,env(safe-area-inset-bottom))] pt-3">
           <div className="mx-auto max-w-3xl">
             <button type="submit" className="btn-haldi w-full text-[17px]" disabled={!canSubmit}>
-              {submitting ? "Placing your order…" : q ? `Place order, ${formatPaise(q.total_paise)}` : "Place order"}
+              {submitting ? "Placing your order…" : q ? `${payment === "online" ? "Pay" : "Place order,"} ${formatPaise(q.total_paise)}` : "Place order"}
             </button>
           </div>
         </div>

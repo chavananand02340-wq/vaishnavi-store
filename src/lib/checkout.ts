@@ -25,6 +25,7 @@ export type Quote = {
   min_order_paise: number | null;
   cod_available: boolean;
   upi_available: boolean;
+  online_available?: boolean;
   store_open: boolean;
   eta_minutes: number;
 };
@@ -59,7 +60,7 @@ export type PlaceOrderInput = {
   landmark: string;
   pincode: string;
   instructions: string;
-  payment: "cod" | "upi";
+  payment: "cod" | "upi" | "online";
   coupon: string | null;
   email: string;
   expectedTotal: number;

@@ -159,3 +159,34 @@ set request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
 select pg_temp.check((public.update_order_status((select id from public.orders where coupon_code = 'DIWALI10'), 'cancelled', 'test') ->> 'ok')::boolean, 'owner cancels coupon order');
 reset role;
 select pg_temp.check((select used_count = 0 from public.coupons where code = 'DIWALI10'), 'cancel gives the coupon use back');
+
+-- ---------- Online payment (Razorpay) ----------
+update public.store_settings set razorpay_enabled = false where id = 1;
+set role anon;
+set request.jwt.claim.sub = '';
+select pg_temp.check(public.quote_cart('[{"variant_id":"b0000000-0000-0000-0000-000000000200","qty":1}]', '442001') ->> 'online_available' = 'false', 'quote says online is off');
+do $$ begin
+  perform public.place_order('d0000000-0000-0000-0000-000000000031', 'Asha', '9123456782', 'Plot 9 Tukum', '442001', 'online',
+    '[{"variant_id":"b0000000-0000-0000-0000-000000000200","qty":1}]', 23000);
+  raise exception 'should have failed';
+exception when others then
+  if sqlerrm = 'should have failed' then raise; end if;
+end $$;
+select pg_temp.check(true, 'online order refused while switched off');
+reset role;
+update public.store_settings set razorpay_enabled = true where id = 1;
+set role anon;
+select pg_temp.check(public.quote_cart('[{"variant_id":"b0000000-0000-0000-0000-000000000200","qty":1}]', '442001') ->> 'online_available' = 'true', 'quote says online is on');
+select public.place_order('d0000000-0000-0000-0000-000000000032', 'Asha', '9123456782', 'Plot 9 Tukum', '442001', 'online',
+    '[{"variant_id":"b0000000-0000-0000-0000-000000000200","qty":1}]', 23000) ->> 'public_token' as otok \gset
+select pg_temp.check(:'otok' <> '', 'online order placed');
+select pg_temp.check(public.order_for_payment(:'otok', 'wrong') is null, 'payment details need the secret');
+select pg_temp.check((public.order_for_payment(:'otok', :'sec') ->> 'total_paise')::int = 23000, 'payment details have total');
+select pg_temp.check(public.set_razorpay_order(:'otok', :'sec', 'order_TEST123'), 'razorpay order saved');
+select pg_temp.check(public.mark_online_paid(:'sec', 'order_TEST123', 'pay_1', 100) ->> 'code' = 'amount_mismatch', 'wrong amount not marked paid');
+select pg_temp.check((public.mark_online_paid('wrong', 'order_TEST123', 'pay_1', 23000) ->> 'ok')::boolean = false, 'mark paid needs the secret');
+select pg_temp.check((public.mark_online_paid(:'sec', 'order_TEST123', 'pay_1', 23000) ->> 'ok')::boolean, 'marked paid');
+select pg_temp.check((public.mark_online_paid(:'sec', 'order_TEST123', 'pay_1', 23000) ->> 'already')::boolean, 'second call is harmless');
+reset role;
+select pg_temp.check((select payment_status = 'paid' and paid_at is not null from public.orders where public_token = :'otok'), 'order is paid');
+update public.store_settings set razorpay_enabled = false where id = 1;

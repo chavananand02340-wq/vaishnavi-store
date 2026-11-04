@@ -19,7 +19,7 @@ export type NotifyOrder = {
   landmark: string | null;
   pincode: string;
   instructions: string | null;
-  payment_method: "cod" | "upi";
+  payment_method: "cod" | "upi" | "online";
   payment_status?: "unpaid" | "awaiting_verification" | "paid";
   subtotal_paise: number;
   delivery_fee_paise: number;
@@ -108,14 +108,18 @@ function box(title: string, body: string) {
 }
 
 const payText = (o: NotifyOrder) =>
-  o.payment_method === "cod"
+  o.payment_method === "online"
+    ? o.payment_status === "paid"
+      ? `<b>Paid online</b> ✓`
+      : `<b>Online payment</b><br>Not paid yet. Tap "Track your order" to pay.`
+    : o.payment_method === "cod"
     ? `<b>Cash on delivery</b><br>Please keep ${rupees(o.total_paise)} ready. You can also pay the delivery person by UPI.`
     : o.payment_status === "paid"
       ? `<b>UPI, paid</b> ✓`
       : `<b>UPI</b><br>The shop will confirm your payment shortly.`;
 
 export function subjectFor(kind: EmailKind, o: NotifyOrder) {
-  if (kind === "owner") return `🛒 New order #${o.order_no}: ${rupees(o.total_paise)} (${o.payment_method === "cod" ? "Cash" : "UPI"}) from ${o.customer_name}`;
+  if (kind === "owner") return `🛒 New order #${o.order_no}: ${rupees(o.total_paise)} (${o.payment_method === "cod" ? "Cash" : o.payment_method === "online" ? "Online" : "UPI"}) from ${o.customer_name}`;
   if (kind === "packing") return `📦 We're packing your order #${o.order_no}`;
   return `✅ Order received #${o.order_no}: ${rupees(o.total_paise)}`;
 }
@@ -153,7 +157,7 @@ export function orderEmailHtml(kind: EmailKind, o: NotifyOrder, siteUrl: string)
     const map = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${o.address_line} ${o.landmark ?? ""} ${o.pincode}`)}`;
     hero = `<div style="font-size:40px;line-height:1">🔔</div>
       <h1 style="margin:10px 0 6px;font-size:24px;color:${INK}">New order ${no}: ${rupees(o.total_paise)}</h1>
-      <p style="margin:0;color:${MUTED};font-size:15px;line-height:1.5">${esc(o.customer_name)} ordered at ${esc(when)}.<br>Payment: <b style="color:${INK}">${o.payment_method === "cod" ? "Cash on delivery" : "UPI (check your UPI app)"}</b></p>
+      <p style="margin:0;color:${MUTED};font-size:15px;line-height:1.5">${esc(o.customer_name)} ordered at ${esc(when)}.<br>Payment: <b style="color:${INK}">${o.payment_method === "cod" ? "Cash on delivery" : o.payment_method === "online" ? (o.payment_status === "paid" ? "Paid online ✓" : "Online (not paid yet)") : "UPI (check your UPI app)"}</b></p>
       <p style="margin:16px 0 0">${button(`${siteUrl}/staff`, "Open live orders")}</p>`;
     body = `${itemsTable(o, true)}${box("Customer", address)}
       <p style="margin:16px 0 0">${button(callCust, "📞 Call customer", "#f1f2f4", INK)}${button(waCust, "WhatsApp customer", "#25d366", "#073b20")}${button(map, "📍 Map", "#f1f2f4", INK)}</p>

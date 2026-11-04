@@ -29,7 +29,7 @@ export type OrderRow = {
   coupon_code: string | null;
   customer_email: string | null;
   total_paise: number;
-  payment_method: "cod" | "upi";
+  payment_method: "cod" | "upi" | "online";
   payment_status: "unpaid" | "awaiting_verification" | "paid";
   upi_utr: string | null;
   eta_minutes: number | null;
@@ -189,7 +189,7 @@ export function OrderCard({
         <div className="text-right">
           <p className="font-display text-[24px] font-extrabold leading-none">{formatPaise(o.total_paise)}</p>
           <p className={`mt-1 text-[13px] font-bold ${o.payment_status === "paid" ? "text-emerald-700" : "text-amber-700"}`}>
-            {o.payment_method === "cod" ? "Cash" : "UPI"}, {PAYMENT_LABEL[o.payment_status]}
+            {o.payment_method === "cod" ? "Cash" : o.payment_method === "online" ? "Online" : "UPI"}, {o.payment_method === "online" && o.payment_status !== "paid" ? "Not paid yet" : PAYMENT_LABEL[o.payment_status]}
           </p>
         </div>
       </div>
