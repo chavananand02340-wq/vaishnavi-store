@@ -27,11 +27,13 @@ export default function LiveOrders() {
   });
 
   const active = data?.active ?? [];
-  const fresh = active.filter((o) => o.status === "new");
+  const unpaidOnline = (o: OrderRow) => o.payment_method === "online" && o.payment_status !== "paid";
+  const fresh = active.filter((o) => o.status === "new" && !unpaidOnline(o));
   const groups = [
     { key: "new", title: "New, confirm these", list: fresh },
     { key: "confirmed", title: "Packing", list: active.filter((o) => o.status === "confirmed") },
     { key: "out_for_delivery", title: "On the way", list: active.filter((o) => o.status === "out_for_delivery") },
+    { key: "awaiting_payment", title: "Waiting for online payment (don't pack yet)", list: active.filter((o) => o.status === "new" && unpaidOnline(o)) },
   ];
   const common = { isOwner: role === "owner", storeName: data?.storeName ?? "", defaultEta: data?.eta ?? 30, onChanged: reload, detailLink: role === "owner" };
 
@@ -41,7 +43,7 @@ export default function LiveOrders() {
 
       {/* Count strip: one colour per stage */}
       <div className="grid grid-cols-3 gap-2">
-        {groups.map((g) => (
+        {groups.slice(0, 3).map((g) => (
           <a key={g.key} href={`#${g.key}`} className={`rounded-2xl px-3 py-3 ring-1 ${STATUS[g.key].pill}`}>
             <span className="block font-display text-[30px] font-extrabold leading-none">{g.list.length}</span>
             <span className="text-[13px] font-bold">{STATUS[g.key].label}</span>
@@ -60,7 +62,7 @@ export default function LiveOrders() {
           (g) =>
             g.list.length > 0 && (
               <section key={g.key} id={g.key} className="scroll-mt-20">
-                <h2 className="mb-2 text-[18px] font-bold">{g.title}</h2>
+                <h2 className={`mb-2 text-[18px] font-bold ${g.key === "awaiting_payment" ? "text-muted" : ""}`}>{g.title}</h2>
                 <div className="grid gap-3 md:grid-cols-2">
                   {g.list.map((o) => <OrderCard key={o.id} o={o} {...common} />)}
                 </div>
