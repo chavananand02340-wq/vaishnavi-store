@@ -17,8 +17,8 @@ const TINTS = ["#ffe9a8", "#cdeedb", "#ffd9cf", "#d6e6ff", "#e7dcff", "#c9f0ea",
 function SectionHead({ id, title, href, count, dot, icon = "star" }: { id: string; title: string; href?: string; count?: number; dot: string; icon?: string }) {
   return (
     <div
-      className="mb-3 flex items-center justify-between gap-3 rounded-2xl px-3 py-2.5 ring-1"
-      style={{ background: `color-mix(in srgb, ${dot} 9%, white)`, ["--tw-ring-color" as string]: `color-mix(in srgb, ${dot} 22%, white)` }}
+      className="mb-3 flex items-center justify-between gap-3 rounded-2xl border-l-[5px] px-3 py-2.5 shadow-[0_6px_14px_-10px_rgba(0,0,0,.35)] ring-1"
+      style={{ background: `color-mix(in srgb, ${dot} 17%, white)`, borderLeftColor: dot, ["--tw-ring-color" as string]: `color-mix(in srgb, ${dot} 40%, white)` }}
     >
       <h2 id={id} className="flex min-w-0 items-center gap-2.5 font-display text-[20px] font-extrabold leading-tight">
         <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white shadow-sm" style={{ color: dot }} aria-hidden>
