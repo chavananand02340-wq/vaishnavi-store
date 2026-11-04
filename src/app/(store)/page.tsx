@@ -14,16 +14,21 @@ import { WaIcon } from "@/components/WaIcon";
 // Each shelf gets its own colour so the page feels like a stocked shop.
 const TINTS = ["#ffe9a8", "#cdeedb", "#ffd9cf", "#d6e6ff", "#e7dcff", "#c9f0ea", "#fbe0c4", "#e3efc0", "#ffd6ea", "#d9f2c8"];
 
-function SectionHead({ id, title, href, count, dot }: { id: string; title: string; href?: string; count?: number; dot: string }) {
+function SectionHead({ id, title, href, count, dot, icon = "star" }: { id: string; title: string; href?: string; count?: number; dot: string; icon?: string }) {
   return (
-    <div className="mb-3 flex items-center justify-between gap-3">
-      <h2 id={id} className="flex items-center gap-2 font-display text-[21px] font-bold leading-tight">
-        <span className="h-6 w-1.5 rounded-full" style={{ background: dot }} aria-hidden />
-        {title}
+    <div
+      className="mb-3 flex items-center justify-between gap-3 rounded-2xl px-3 py-2.5 ring-1"
+      style={{ background: `color-mix(in srgb, ${dot} 9%, white)`, ["--tw-ring-color" as string]: `color-mix(in srgb, ${dot} 22%, white)` }}
+    >
+      <h2 id={id} className="flex min-w-0 items-center gap-2.5 font-display text-[20px] font-extrabold leading-tight">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white shadow-sm" style={{ color: dot }} aria-hidden>
+          <Icon name={icon} className="size-[18px]" strokeWidth={2.4} />
+        </span>
+        <span className="truncate">{title}</span>
       </h2>
       {href && (
-        <Link href={href} className="flex shrink-0 items-center gap-0.5 rounded-full bg-brand-50 px-3 py-1.5 text-[14px] font-bold text-brand-700">
-          See all{count ? ` ${count}` : ""} <Icon name="right" className="size-4" strokeWidth={2.6} />
+        <Link href={href} className="flex shrink-0 items-center gap-0.5 rounded-full bg-white px-3 py-1.5 text-[14px] font-bold shadow-sm" style={{ color: dot }}>
+          View all{count ? ` ${count}` : ""} <Icon name="right" className="size-4" strokeWidth={2.6} />
         </Link>
       )}
     </div>
@@ -56,6 +61,32 @@ export default async function Home() {
     <>
       <StoreHeader />
       <main className="mx-auto w-full max-w-6xl space-y-7 px-4 pb-10 pt-4">
+        {categories.length > 0 && (
+          <nav aria-label="Categories" className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 pb-0.5">
+            {categories.map((c, i) => {
+              const img = imageUrl(c.image_path) ?? byCat.get(c.id)?.find((p) => p.image)?.image ?? null;
+              return (
+                <Link
+                  key={c.id}
+                  href={`/c/${c.slug}`}
+                  className="flex shrink-0 items-center gap-2 rounded-full py-1.5 pl-1.5 pr-4 text-[14.5px] font-bold text-ink ring-1 ring-black/5 active:scale-95"
+                  style={{ background: TINTS[i % TINTS.length] }}
+                >
+                  <span className="size-8 overflow-hidden rounded-full bg-white">
+                    {img ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={img} alt="" className="size-full object-cover" loading="lazy" />
+                    ) : (
+                      <span className="flex size-full items-center justify-center text-[14px] font-extrabold text-ink/40">{c.name.charAt(0)}</span>
+                    )}
+                  </span>
+                  {c.name}
+                </Link>
+              );
+            })}
+          </nav>
+        )}
+
         <SaleHero s={s} productImages={images} />
 
         <ul className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 sm:grid sm:grid-cols-4" aria-label="Why order from us">
@@ -67,7 +98,7 @@ export default async function Home() {
         </ul>
 
         <section id="categories" aria-labelledby="cats" className="scroll-mt-20">
-          <SectionHead id="cats" title="Shop by category" dot="#e30613" />
+          <SectionHead id="cats" title="Shop by category" dot="#e30613" icon="tag" />
           {categories.length === 0 ? (
             <p className="rounded-[var(--radius-card)] bg-white p-4 text-[15px] text-muted ring-1 ring-line">
               The shelves are being stocked. Please check back in a little while.
@@ -124,14 +155,14 @@ export default async function Home() {
 
         {deals.length > 0 && (
           <section id="deals" aria-labelledby="deals-h" className="scroll-mt-20 rounded-[20px] bg-kumkum-50 p-4 pb-3">
-            <SectionHead id="deals-h" title="Best deals today" dot="#d92d20" />
+            <SectionHead id="deals-h" title="Best deals today" dot="#d92d20" icon="percent" />
             <ProductRow products={deals} />
           </section>
         )}
 
         {featured.length > 0 && (
           <section aria-labelledby="popular">
-            <SectionHead id="popular" title="Shop favourites" dot="#e30613" />
+            <SectionHead id="popular" title="Shop favourites" dot="#e30613" icon="star" href="#categories" />
             <ProductRow products={featured} />
           </section>
         )}
@@ -143,7 +174,7 @@ export default async function Home() {
           if (items.length === 0) return null;
           return (
             <section key={c.id} aria-labelledby={`row-${c.id}`}>
-              <SectionHead id={`row-${c.id}`} title={c.name} href={`/c/${c.slug}`} count={items.length} dot={["#e30613", "#f2b705", "#1f2630", "#2563eb", "#0f7a45"][i % 5]} />
+              <SectionHead id={`row-${c.id}`} title={c.name} href={`/c/${c.slug}`} count={items.length} icon="box" dot={["#e30613", "#c98a00", "#1f2630", "#2563eb", "#0f7a45"][i % 5]} />
               <ProductRow products={items.slice(0, 10)} />
             </section>
           );
