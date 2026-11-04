@@ -13,9 +13,17 @@ export async function POST(req: Request) {
   if (!token || !TOKEN_RE.test(token)) return Response.json({ ok: false, message: "Bad request" }, { status: 400 });
 
   const sb = db();
-  const { data } = await sb.rpc("order_for_payment", { p_token: token, p_secret: e.notifySecret });
+  const { data, error } = await sb.rpc("order_for_payment", { p_token: token, p_secret: e.notifySecret });
   const o = data as PayInfo | null;
-  if (!o) return Response.json({ ok: false, message: "Order not found." }, { status: 404 });
+  if (error) return Response.json({ ok: false, message: "Online payment setup isn't finished (SQL part 25)." }, { status: 503 });
+  if (!o) {
+    // Order exists but the secret didn't match → setup problem, not the customer's fault.
+    const { data: exists } = await sb.rpc("get_order_by_token", { p_token: token });
+    return Response.json(
+      { ok: false, message: exists ? "Payment setup issue: NOTIFY_SECRET in Netlify doesn't match Supabase. Please tell the shop." : "Order not found." },
+      { status: exists ? 503 : 404 },
+    );
+  }
   if (o.payment_method !== "online") return Response.json({ ok: false, message: "This order is not an online payment order." }, { status: 400 });
   if (o.payment_status === "paid") return Response.json({ ok: false, paid: true, message: "Already paid." });
   if (o.status === "cancelled") return Response.json({ ok: false, message: "This order was cancelled." }, { status: 400 });

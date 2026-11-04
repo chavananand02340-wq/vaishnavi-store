@@ -5,10 +5,10 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 export function env() {
   return {
-    keyId: process.env.RAZORPAY_KEY_ID ?? "",
-    keySecret: process.env.RAZORPAY_KEY_SECRET ?? "",
-    webhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET ?? "",
-    notifySecret: process.env.NOTIFY_SECRET ?? "",
+    keyId: (process.env.RAZORPAY_KEY_ID ?? "").trim(),
+    keySecret: (process.env.RAZORPAY_KEY_SECRET ?? "").trim(),
+    webhookSecret: (process.env.RAZORPAY_WEBHOOK_SECRET ?? "").trim(),
+    notifySecret: (process.env.NOTIFY_SECRET ?? "").trim(),
     url: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
     anon: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
   };

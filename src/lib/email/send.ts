@@ -4,7 +4,7 @@ import { orderEmailHtml, subjectFor, type EmailKind, type NotifyOrder } from "@/
 /** Server-only. Sends order emails through Resend (see /api/order-email). */
 export async function sendOrderEmails(token: string, event: "placed" | "packing", origin: string) {
   const apiKey = process.env.RESEND_API_KEY;
-  const secret = process.env.NOTIFY_SECRET;
+  const secret = process.env.NOTIFY_SECRET?.trim();
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!apiKey || !secret || !url || !anon) return { ok: false, reason: "not_configured" };

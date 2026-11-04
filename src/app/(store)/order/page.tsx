@@ -71,18 +71,24 @@ function OrderInner() {
 
   const no = `VS-${o.order_no}`;
   const step = STEPS.findIndex((x) => x.key === o.status);
-  const moving = o.status !== "delivered" && o.status !== "cancelled";
+  const awaitingPay = o.payment_method === "online" && o.payment_status !== "paid" && o.status !== "cancelled";
+  const moving = !awaitingPay && o.status !== "delivered" && o.status !== "cancelled";
   const live = o.items.filter((i) => !i.is_unavailable);
   const wa = waLink(s?.whatsapp_number, `Hello, about my order ${no} (${formatPaise(o.total_paise)}):\n${live.map((i) => `${i.qty} x ${i.product_name} (${i.variant_label})`).join("\n")}`);
 
   return (
     <main className="mx-auto max-w-3xl space-y-3 px-3 pb-16 pt-3">
-      <section className={`overflow-hidden rounded-[var(--radius-card)] text-white ${o.status === "cancelled" ? "bg-neutral-700" : "bg-brand-700"}`}>
+      <section className={`overflow-hidden rounded-[var(--radius-card)] text-white ${o.status === "cancelled" ? "bg-neutral-700" : awaitingPay ? "bg-ink" : "bg-brand-700"}`}>
         <div className="p-5">
-          {isNew && o.status === "new" && <p className="text-[15px] font-semibold text-haldi-300">Thank you, {o.customer_first_name}!</p>}
+          {awaitingPay ? (
+            <p className="text-[15px] font-semibold text-haldi-300">One last step, {o.customer_first_name}</p>
+          ) : (
+            isNew && o.status === "new" && <p className="text-[15px] font-semibold text-haldi-300">Thank you, {o.customer_first_name}!</p>
+          )}
           <p className="font-display text-[30px] font-extrabold leading-tight">
-            {o.status === "cancelled" ? "Order cancelled" : step >= 0 ? STEPS[step].title : "Order placed"}
+            {o.status === "cancelled" ? "Order cancelled" : awaitingPay ? "Payment pending" : step >= 0 ? STEPS[step].title : "Order placed"}
           </p>
+          {awaitingPay && <p className="mt-1 text-[15px] text-white/85">Pay {formatPaise(o.total_paise)} to confirm your order. The shop starts packing once it&apos;s paid.</p>}
           <p className="mt-1 text-[15px] text-white/80">
             Order {no}, placed at {istTime(o.created_at)}
           </p>
@@ -97,7 +103,12 @@ function OrderInner() {
         ) : null}
       </section>
 
-      {o.status !== "cancelled" && (
+      {o.payment_method === "online" && o.status !== "cancelled" && (
+        <OnlinePayBox token={token} total={o.total_paise} paid={o.payment_status === "paid"} autoOpen={params.get("pay") === "1"} onPaid={reload} />
+      )}
+
+
+      {o.status !== "cancelled" && !awaitingPay && (
         <ol className="rounded-[var(--radius-card)] bg-white p-4 ring-1 ring-line">
           {STEPS.map((st, i) => {
             const done = i <= step;
@@ -115,10 +126,6 @@ function OrderInner() {
             );
           })}
         </ol>
-      )}
-
-      {o.payment_method === "online" && o.status !== "cancelled" && (
-        <OnlinePayBox token={token} total={o.total_paise} paid={o.payment_status === "paid"} autoOpen={params.get("pay") === "1"} onPaid={reload} />
       )}
 
       {o.payment_method === "upi" && o.payment_status !== "paid" && o.status !== "cancelled" && (
@@ -345,7 +352,7 @@ function OnlinePayBox({ token, total, paid, autoOpen, onPaid }: { token: string;
   return (
     <section className="rounded-[var(--radius-card)] bg-white p-4 text-center ring-1 ring-line">
       <h2 className="text-[17px] font-bold">Pay {formatPaise(total)} online</h2>
-      <p className="mt-1 text-[14px] text-muted">UPI, cards or netbanking. Your order is saved; it goes ahead once you pay.</p>
+      <p className="mt-1 text-[14px] text-muted">UPI (GPay, PhonePe, Paytm), cards or netbanking.</p>
       <button type="button" onClick={pay} disabled={busy} className="btn-haldi mt-3 w-full text-[17px]">
         {busy ? "Opening payment…" : `Pay ${formatPaise(total)} now`}
       </button>
