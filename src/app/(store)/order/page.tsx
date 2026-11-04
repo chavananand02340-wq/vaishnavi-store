@@ -287,11 +287,13 @@ function loadRazorpay(): Promise<boolean> {
 function OnlinePayBox({ token, total, paid, autoOpen, onPaid }: { token: string; total: number; paid: boolean; autoOpen: boolean; onPaid: () => void }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [failed, setFailed] = useState<string | null>(null);
   const started = useRef(false);
 
   async function pay() {
     setBusy(true);
     setMsg(null);
+    setFailed(null);
     const ok = await loadRazorpay();
     if (!ok || !window.Razorpay) {
       setBusy(false);
@@ -315,6 +317,7 @@ function OnlinePayBox({ token, total, paid, autoOpen, onPaid }: { token: string;
       image: `${window.location.origin}/icons/icon-192.png`,
       prefill: r.prefill,
       theme: { color: "#e30613" },
+      retry: { enabled: false },
       modal: { ondismiss: () => setBusy(false) },
       handler: async (resp: RzpResponse) => {
         setMsg({ ok: true, text: "Payment received. Confirming…" });
@@ -328,7 +331,12 @@ function OnlinePayBox({ token, total, paid, autoOpen, onPaid }: { token: string;
     });
     rzp.on("payment.failed", (e) => {
       setBusy(false);
-      setMsg({ ok: false, text: `Payment failed: ${e.error?.description ?? "please try again"}. No money was taken, or it will be refunded automatically.` });
+      setFailed(e.error?.description ?? "The payment didn't go through.");
+      try {
+        (rzp as unknown as { close?: () => void }).close?.();
+      } catch {
+        /* already closed */
+      }
     });
     rzp.open();
   }
@@ -349,6 +357,25 @@ function OnlinePayBox({ token, total, paid, autoOpen, onPaid }: { token: string;
       </section>
     );
   }
+  if (failed) {
+    return (
+      <section className="rounded-[var(--radius-card)] bg-white p-5 text-center ring-2 ring-rose-300" role="alert">
+        <span className="mx-auto flex size-14 items-center justify-center rounded-full bg-rose-100 text-rose-700">
+          <Icon name="x" className="size-8" strokeWidth={3} />
+        </span>
+        <h2 className="mt-3 font-display text-[22px] font-extrabold text-rose-800">Payment failed</h2>
+        <p className="mt-1 text-[15px] text-ink">{failed}</p>
+        <p className="mt-2 text-[14px] text-muted">
+          Don&apos;t worry: no money was taken. If money was deducted, it is refunded to your account automatically in 5–7 days.
+        </p>
+        <button type="button" onClick={pay} disabled={busy} className="btn-haldi mt-4 w-full text-[17px]">
+          {busy ? "Opening payment…" : `Try again, ${formatPaise(total)}`}
+        </button>
+        <p className="mt-3 text-[13px] text-muted">Try another UPI app, card or bank. Still stuck? Call or WhatsApp the shop below.</p>
+      </section>
+    );
+  }
+
   return (
     <section className="rounded-[var(--radius-card)] bg-white p-4 text-center ring-1 ring-line">
       <h2 className="text-[17px] font-bold">Pay {formatPaise(total)} online</h2>

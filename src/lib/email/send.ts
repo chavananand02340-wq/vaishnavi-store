@@ -24,8 +24,14 @@ export async function sendOrderEmails(token: string, event: "placed" | "packing"
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({ from, to: [to], subject: subjectFor(kind, o), html: orderEmailHtml(kind, o, siteUrl), ...(replyTo ? { reply_to: replyTo } : {}) }),
     })
-      .then((r) => r.ok)
-      .catch(() => false);
+      .then(async (r) => {
+        if (!r.ok) console.error("Resend error", r.status, await r.text().catch(() => ""));
+        return r.ok;
+      })
+      .catch((e) => {
+        console.error("Resend fetch failed", e);
+        return false;
+      });
 
   const jobs: Promise<boolean>[] = [];
   if (event === "packing") {
