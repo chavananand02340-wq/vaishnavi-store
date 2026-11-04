@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase/browser";
 import { Icon } from "@/components/Icon";
+import { alarm } from "./alarm";
 import { HUE, type Hue } from "./ui";
 import { useTeam } from "./team";
 
@@ -26,34 +27,99 @@ function isActive(path: string, href: string) {
   return href === "/admin" ? path === "/admin" : path === href || path.startsWith(`${href}/`) || (href === "/admin/orders" && path === "/admin/order");
 }
 
-/** Number of orders waiting in "New", kept live for the menu badge. */
-function useNewCount() {
-  const [n, setN] = useState(0);
+/**
+ * Orders waiting in "New" (online orders count only once paid), kept live.
+ * Also rings the shared alarm on every admin page when a new one arrives.
+ */
+function useNewOrders() {
+  const [ids, setIds] = useState<{ id: string; no: number }[]>([]);
+  const [alarmOn, setAlarmOn] = useState(false);
+  const seen = useRef<Set<string> | null>(null);
+
+  useEffect(() => alarm.subscribe(() => setAlarmOn(alarm.isOn())), []);
+  useEffect(() => setAlarmOn(alarm.isOn()), []);
+
   useEffect(() => {
     const sb = supabase();
     const load = async () => {
-      const { count } = await sb.from("orders").select("id", { count: "exact", head: true }).eq("status", "new");
-      setN(count ?? 0);
+      const { data } = await sb.from("orders").select("id, order_no, payment_method, payment_status").eq("status", "new").order("created_at");
+      const list = ((data ?? []) as { id: string; order_no: number; payment_method: string; payment_status: string }[])
+        .filter((o) => !(o.payment_method === "online" && o.payment_status !== "paid"))
+        .map((o) => ({ id: o.id, no: o.order_no }));
+      const first = seen.current === null;
+      seen.current = seen.current ?? new Set();
+      const fresh = list.filter((o) => !seen.current!.has(o.id));
+      list.forEach((o) => seen.current!.add(o.id));
+      setIds(list);
+      if (!first && fresh.length) {
+        if (alarm.isOn()) alarm.beep();
+        if (document.visibilityState !== "visible" && "Notification" in window && Notification.permission === "granted") {
+          try {
+            new Notification("New order", { body: `VS-${fresh.at(-1)!.no}`, tag: "vs-new-order" });
+          } catch {
+            /* some phones only allow notifications from an installed app */
+          }
+        }
+      }
     };
     void load();
     const ch = sb
-      .channel("menu-new-count")
+      .channel("panel-new-orders")
       .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => void load())
       .subscribe();
-    const t = setInterval(load, 60_000);
+    const t = setInterval(() => document.visibilityState === "visible" && void load(), 20_000);
+    const onVis = () => {
+      if (document.visibilityState === "visible") {
+        void load();
+        if (alarm.isOn()) void alarm.keepAwake();
+      }
+    };
+    document.addEventListener("visibilitychange", onVis);
     return () => {
       clearInterval(t);
+      document.removeEventListener("visibilitychange", onVis);
       void sb.removeChannel(ch);
     };
   }, []);
-  return n;
+
+  // Keep ringing every 20 s until someone accepts the order.
+  useEffect(() => {
+    if (!alarmOn || ids.length === 0) return;
+    const t = setInterval(() => alarm.beep(), 20_000);
+    return () => clearInterval(t);
+  }, [alarmOn, ids.length]);
+
+  return { count: ids.length, alarmOn };
+}
+
+/** Thin bar on every panel page: turn on the alarm, or jump to new orders. */
+function AlarmBar({ count, alarmOn, onStaffPage }: { count: number; alarmOn: boolean; onStaffPage: boolean }) {
+  if (onStaffPage && !count) return null;
+  if (!alarmOn) {
+    return (
+      <button type="button" onClick={() => void alarm.start()} className="mb-3 flex w-full items-center gap-3 rounded-2xl bg-amber-500 px-4 py-3 text-left text-amber-950 shadow-[0_8px_20px_-12px_rgba(180,83,9,.8)]">
+        <Icon name="bell" className="size-6 shrink-0" strokeWidth={2.4} />
+        <span className="flex-1 text-[15px] font-bold">
+          {count ? `${count} new order${count > 1 ? "s" : ""}! ` : ""}Tap to turn on the order alarm
+        </span>
+      </button>
+    );
+  }
+  if (!count || onStaffPage) return null;
+  return (
+    <Link href="/staff" className="mb-3 flex items-center gap-3 rounded-2xl bg-amber-100 px-4 py-3 text-amber-950 ring-2 ring-amber-400">
+      <Icon name="bell" className="size-6 shrink-0 animate-ring text-amber-600" strokeWidth={2.4} />
+      <span className="flex-1 text-[15px] font-bold">{count} new order{count > 1 ? "s" : ""} waiting. Tap to accept.</span>
+      <Icon name="right" className="size-5" strokeWidth={2.6} />
+    </Link>
+  );
 }
 
 export function Shell({ children }: { children: React.ReactNode }) {
   const { role, name, signOut } = useTeam();
   const path = usePathname();
   const [more, setMore] = useState(false);
-  const newCount = useNewCount();
+  const { count: newCount, alarmOn } = useNewOrders();
   const isOwner = role === "owner";
   const nav = isOwner ? OWNER_NAV : [];
   const tabs = nav.filter((n) => n.tab);
@@ -125,7 +191,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className={`mx-auto max-w-5xl px-4 pt-5 ${isOwner ? "pb-28 lg:pb-10" : "pb-10"}`}>{children}</main>
+        <main className={`mx-auto max-w-5xl px-4 pt-5 ${isOwner ? "pb-28 lg:pb-10" : "pb-10"}`}>
+          <AlarmBar count={newCount} alarmOn={alarmOn} onStaffPage={path === "/staff"} />
+          {children}
+        </main>
       </div>
 
       {/* Mobile bottom tabs (owner) */}
