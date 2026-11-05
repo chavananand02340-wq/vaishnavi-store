@@ -17,7 +17,7 @@
   // Page cache (store pages are kept here and refreshed when the owner changes something).
   // Create it once: Cloudflare → Storage & databases → KV → Create "vaishnavi-cache", then paste its ID here.
   "kv_namespaces": [
-    { "binding": "NEXT_INC_CACHE_KV", "id": "REPLACE_WITH_KV_NAMESPACE_ID" }
+    { "binding": "NEXT_INC_CACHE_KV", "id": "d6923416437049f8a2de36f941c2ab71" }
   ],
   // Durable Objects for refreshing cached pages (free plan supports SQLite-backed ones).
   "durable_objects": {
