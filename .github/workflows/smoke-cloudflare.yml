@@ -1,0 +1,24 @@
+name: Check Cloudflare site
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Deploy to Cloudflare"]
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Fetch pages
+        run: |
+          B=https://vaishnavi-store.chavananand02340.workers.dev
+          for p in / /terms /cart /login /admin /api/health; do
+            code=$(curl -s -o /tmp/body -w '%{http_code} %{time_total}s' "$B$p")
+            echo "=== $p -> $code"
+            head -c 600 /tmp/body | tr '\n' ' '; echo
+          done
