@@ -10,3 +10,9 @@ next-env.d.ts
 npm-debug.log*
 coverage/
 supabase/.temp/
+
+# Cloudflare
+.open-next/
+.wrangler/
+.dev.vars
+cloudflare-env.d.ts

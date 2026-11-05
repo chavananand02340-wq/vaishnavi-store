@@ -1,0 +1,32 @@
+// Cloudflare Workers config for the website (built with @opennextjs/cloudflare).
+// The "name" must match the Worker name in the Cloudflare dashboard.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "vaishnavi-store",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2025-10-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "observability": { "enabled": true },
+  "services": [
+    { "binding": "WORKER_SELF_REFERENCE", "service": "vaishnavi-store" }
+  ],
+  // Page cache (store pages are kept here and refreshed when the owner changes something).
+  // Create it once: Cloudflare → Storage & databases → KV → Create "vaishnavi-cache", then paste its ID here.
+  "kv_namespaces": [
+    { "binding": "NEXT_INC_CACHE_KV", "id": "REPLACE_WITH_KV_NAMESPACE_ID" }
+  ],
+  // Durable Objects for refreshing cached pages (free plan supports SQLite-backed ones).
+  "durable_objects": {
+    "bindings": [
+      { "name": "NEXT_CACHE_DO_QUEUE", "class_name": "DOQueueHandler" },
+      { "name": "NEXT_TAG_CACHE_DO_SHARDED", "class_name": "DOShardedTagCache" }
+    ]
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["DOQueueHandler", "DOShardedTagCache"] }
+  ]
+}

@@ -4,9 +4,9 @@ import { CartBar } from "@/components/store/CartBar";
 import { StoreFooter } from "@/components/store/StoreFooter";
 import { ToastProvider } from "@/components/Toast";
 
-// Store pages are cached on the CDN and refreshed at most every 60 s,
+// Store pages are cached and refreshed at most every 15 minutes,
 // and immediately when the owner changes products or settings.
-export const revalidate = 60;
+export const revalidate = 900;
 
 export default async function StoreLayout({ children }: { children: React.ReactNode }) {
   const settings = await getSettings();

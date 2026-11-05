@@ -39,6 +39,28 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder
 
+  cloudflare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - name: Build for Cloudflare Workers
+        run: npx opennextjs-cloudflare build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder
+      - name: Check Worker size (free plan limit 3 MiB gzip)
+        shell: bash
+        run: |
+          sed -i 's/REPLACE_WITH_KV_NAMESPACE_ID/00000000000000000000000000000000/' wrangler.jsonc
+          npx wrangler deploy --dry-run --outdir /tmp/cf-out 2>&1 | tee size.log
+          line=$(grep -o 'Total Upload:.*' size.log | tail -1)
+          echo "::notice title=Worker size::$line"
+
   database:
     runs-on: ubuntu-latest
     timeout-minutes: 10
