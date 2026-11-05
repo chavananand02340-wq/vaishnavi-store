@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 export const dynamic = "force-dynamic";
 
@@ -73,7 +73,7 @@ export async function GET(req: Request) {
 }
 
 /** Sends one test email to the shop's own "Order emails" address and reports what Resend said. */
-async function testEmail(sb: ReturnType<typeof createClient>) {
+async function testEmail(sb: SupabaseClient) {
   const apiKey = process.env.RESEND_API_KEY?.trim();
   if (!apiKey) return Response.json({ ok: false, message: "RESEND_API_KEY is not set." });
   const { data: row } = await sb.from("store_settings").select("notify_email, store_name").eq("id", 1).single();
