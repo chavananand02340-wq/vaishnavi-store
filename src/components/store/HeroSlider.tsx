@@ -103,7 +103,7 @@ export function HeroSlider({ banners, productImages }: { banners: Banner[]; prod
 
 function BannerImage({ s }: { s: Extract<Slide, { kind: "image" }> }) {
   // eslint-disable-next-line @next/next/no-img-element
-  const img = <img src={s.image} alt={s.alt} className="aspect-[2/1] w-full rounded-[20px] object-cover sm:aspect-[3/1]" />;
+  const img = <img src={s.image} alt={s.alt} loading="lazy" decoding="async" className="aspect-[2/1] w-full rounded-[20px] object-cover sm:aspect-[3/1]" />;
   if (!s.link) return img;
   return s.link.startsWith("/") ? <Link href={s.link}>{img}</Link> : <a href={s.link} rel="noopener">{img}</a>;
 }
@@ -131,6 +131,8 @@ function BuiltBanner({ s }: { s: Extract<Slide, { kind: "built" }> }) {
             key={k}
             src={src}
             alt=""
+            loading="lazy"
+            decoding="async"
             className="absolute size-[58%] rounded-2xl bg-white object-contain p-1.5 shadow-[0_10px_24px_-10px_rgba(0,0,0,.45)] sm:size-[42%]"
             style={{ transform: `translate(${(k - 1) * 30}%, ${k === 1 ? -8 : 10}%) rotate(${(k - 1) * 8}deg)`, zIndex: k === 1 ? 3 : 1 }}
           />

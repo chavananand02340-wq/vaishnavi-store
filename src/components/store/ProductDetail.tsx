@@ -38,7 +38,7 @@ export function ProductDetail({ product, images, description }: { product: CardP
                   aria-label={`Photo ${i + 1}`}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={src} alt="" className="size-full object-contain p-1" />
+                  <img src={src} alt="" loading="lazy" decoding="async" className="size-full object-contain p-1" />
                 </button>
               ))}
             </div>

@@ -49,7 +49,7 @@ export function CartBar() {
           {thumbs.map((l) => (
             <span key={l.variantId} className="size-10 overflow-hidden rounded-lg border-2 border-brand-800 bg-white">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              {l.image ? <img src={l.image} alt="" className="size-full object-contain" /> : null}
+              {l.image ? <img src={l.image} alt="" loading="lazy" decoding="async" className="size-full object-contain" /> : null}
             </span>
           ))}
         </div>

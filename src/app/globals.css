@@ -143,3 +143,6 @@ body {
 @keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 .ticker { animation: ticker 28s linear infinite; }
 .ticker:hover, .ticker:active { animation-play-state: paused; }
+
+/* Lazy render: shelves further down the page are only drawn when scrolled near */
+.lazy-section { content-visibility: auto; contain-intrinsic-size: auto 420px; }

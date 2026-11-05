@@ -75,7 +75,7 @@ export default async function Home() {
                   <span className="size-8 overflow-hidden rounded-full bg-white">
                     {img ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={img} alt="" className="size-full object-cover" loading="lazy" />
+                      <img src={img} alt="" className="size-full object-cover" loading="lazy" decoding="async" />
                     ) : (
                       <span className="flex size-full items-center justify-center text-[14px] font-extrabold text-ink/40">{c.name.charAt(0)}</span>
                     )}
@@ -124,6 +124,7 @@ export default async function Home() {
                           alt=""
                           className={`size-full transition group-hover:scale-105 ${own ? "object-cover" : "object-contain p-2 mix-blend-multiply"}`}
                           loading="lazy"
+                          decoding="async"
                         />
                       ) : (
                         <span className="flex size-full items-center justify-center font-display text-[44px] font-extrabold text-ink/15">{c.name.charAt(0)}</span>
@@ -173,7 +174,7 @@ export default async function Home() {
           const items = byCat.get(c.id) ?? [];
           if (items.length === 0) return null;
           return (
-            <section key={c.id} aria-labelledby={`row-${c.id}`}>
+            <section key={c.id} aria-labelledby={`row-${c.id}`} className="lazy-section">
               <SectionHead id={`row-${c.id}`} title={c.name} href={`/c/${c.slug}`} count={items.length} icon="box" dot={["#e30613", "#c98a00", "#1f2630", "#2563eb", "#0f7a45"][i % 5]} />
               <ProductRow products={items.slice(0, 10)} />
             </section>

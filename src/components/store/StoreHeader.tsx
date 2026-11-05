@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { formatTime, isOpenNow } from "@/lib/hours";
 import { formatPaise } from "@/lib/money";
 import { Icon } from "@/components/Icon";
+import { cleanTerm, searchProducts } from "@/lib/search";
+import type { CardProduct } from "@/lib/cards";
 import { useCart } from "./cart";
 
 /** Re-computes open/closed in the browser so cached pages stay accurate. */
@@ -22,32 +24,121 @@ export function useOpenNow() {
   return open;
 }
 
+const HINTS = ["atta", "rice", "dal", "oil", "sugar", "biscuits", "milk", "soap"];
+
 function SearchBox() {
   const router = useRouter();
   const params = useSearchParams();
   const [q, setQ] = useState(params.get("q") ?? "");
+  const [open, setOpen] = useState(false);
+  const [items, setItems] = useState<CardProduct[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [hint, setHint] = useState(0);
+  const seq = useRef(0);
+
+  // Rotating placeholder: "Search for atta", "Search for rice"…
+  useEffect(() => {
+    const t = setInterval(() => setHint((h) => (h + 1) % HINTS.length), 2200);
+    return () => clearInterval(t);
+  }, []);
+
+  // Live suggestions while typing.
+  useEffect(() => {
+    const term = cleanTerm(q);
+    if (term.length < 2) {
+      setItems([]);
+      setBusy(false);
+      return;
+    }
+    const mine = ++seq.current;
+    setBusy(true);
+    const t = setTimeout(async () => {
+      const r = await searchProducts(term, 40).catch(() => []);
+      if (mine !== seq.current) return;
+      setItems(r.slice(0, 6));
+      setBusy(false);
+    }, 180);
+    return () => clearTimeout(t);
+  }, [q]);
+
+  function go(term: string) {
+    const t = term.trim();
+    if (!t) return;
+    setOpen(false);
+    router.push(`/search?q=${encodeURIComponent(t)}`);
+  }
+
+  const term = cleanTerm(q);
+  const show = open && term.length >= 2;
+
   return (
     <form
       role="search"
       onSubmit={(e) => {
         e.preventDefault();
-        const term = q.trim();
-        if (term) router.push(`/search?q=${encodeURIComponent(term)}`);
+        go(q);
       }}
       className="relative"
     >
-      <Icon name="search" className="pointer-events-none absolute left-3.5 top-1/2 size-5 -translate-y-1/2 text-muted" />
-      <input
-        name="q"
-        type="search"
-        enterKeyHint="search"
-        autoComplete="off"
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        placeholder="Search atta, tel, biscuits…"
-        aria-label="Search products"
-        className="w-full rounded-xl border border-line bg-page py-3 pl-11 pr-3 text-[16px] text-ink outline-none placeholder:text-neutral-500 focus:border-brand-600 focus:bg-white focus:ring-4 focus:ring-brand-100"
-      />
+      <div className="flex items-center rounded-2xl border-2 border-brand-600 bg-white shadow-[0_6px_18px_-10px_rgba(227,6,19,.55)] focus-within:ring-4 focus-within:ring-brand-100">
+        <Icon name="search" className="ml-3.5 size-[22px] shrink-0 text-brand-600" strokeWidth={2.4} />
+        <input
+          name="q"
+          type="search"
+          enterKeyHint="search"
+          autoComplete="off"
+          value={q}
+          onChange={(e) => {
+            setQ(e.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setTimeout(() => setOpen(false), 150)}
+          placeholder={`Search for "${HINTS[hint]}"`}
+          aria-label="Search products"
+          className="min-w-0 flex-1 bg-transparent px-3 py-3 text-[16px] font-medium text-ink outline-none placeholder:font-normal placeholder:text-neutral-500"
+        />
+        {q && (
+          <button type="button" onClick={() => setQ("")} className="px-2 text-muted" aria-label="Clear search">
+            <Icon name="x" className="size-5" />
+          </button>
+        )}
+        <button type="submit" className="m-1 rounded-xl bg-brand-600 px-4 py-2.5 text-[15px] font-bold text-white">
+          Search
+        </button>
+      </div>
+
+      {show && (
+        <div className="absolute inset-x-0 top-full z-50 mt-2 overflow-hidden rounded-2xl bg-white shadow-[0_18px_40px_-12px_rgba(0,0,0,.35)] ring-1 ring-line">
+          {items.length === 0 ? (
+            <p className="px-4 py-4 text-[15px] text-muted">{busy ? "Searching…" : `No match for "${term}". Try another word.`}</p>
+          ) : (
+            <ul>
+              {items.map((p) => {
+                const v = p.variants[0];
+                return (
+                  <li key={p.id}>
+                    <Link href={`/p/${p.id}`} onClick={() => setOpen(false)} className="flex items-center gap-3 px-3 py-2.5 hover:bg-page">
+                      <span className="size-11 shrink-0 overflow-hidden rounded-lg bg-page">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        {p.image && <img src={p.image} alt="" loading="lazy" decoding="async" className="size-full object-contain" />}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[15px] font-semibold">{p.name}</span>
+                        <span className="block text-[13px] text-muted">{v.label}{p.variants.length > 1 ? ` + ${p.variants.length - 1} more` : ""}</span>
+                      </span>
+                      <span className="shrink-0 text-[15px] font-extrabold">{formatPaise(v.price)}</span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          <button type="submit" className="flex w-full items-center justify-between border-t border-line px-4 py-3 text-[15px] font-bold text-brand-700">
+            See all results for &quot;{term}&quot; <Icon name="right" className="size-4" strokeWidth={2.6} />
+          </button>
+        </div>
+      )}
     </form>
   );
 }
