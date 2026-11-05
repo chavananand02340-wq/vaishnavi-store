@@ -5,6 +5,8 @@ on:
   workflow_run:
     workflows: ["Deploy to Cloudflare"]
     types: [completed]
+  schedule:
+    - cron: "17 3 * * *"   # every day 08:47 IST
 
 permissions:
   contents: read
@@ -12,17 +14,19 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
-      - name: Fetch pages
-        run: |
-          B=https://vaishnavistores.shop
-          for p in / /terms /cart /login /admin /api/health; do
-            code=$(curl -s -o /tmp/body -w '%{http_code} %{time_total}s' "$B$p")
-            echo "=== $p -> $code"
-            grep -o -E 'Shop by category|being set up|Something went wrong|Application error|Diwali|Order emails|Owner and counter login' /tmp/body | sort | uniq -c | tr '\n' ' '; echo
-          done
-          echo "=== www redirect"
-          curl -s -o /dev/null -w '%{http_code} -> %{redirect_url}\n' "https://www.vaishnavistores.shop/order?t=abc"
-          echo "=== served by"
-          curl -sI "$B/" | grep -iE '^(server|cf-ray|x-nf-request-id|x-opennext)' || true
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Live checks
+        run: node tools/smoke.mjs
+        env:
+          SITE: https://vaishnavistores.shop
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          RAZORPAY_KEY_SECRET: ${{ secrets.RAZORPAY_KEY_SECRET }}
+          RAZORPAY_WEBHOOK_SECRET: ${{ secrets.RAZORPAY_WEBHOOK_SECRET }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          NOTIFY_SECRET: ${{ secrets.NOTIFY_SECRET }}

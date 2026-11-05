@@ -8,6 +8,7 @@ import { refreshStorefront } from "@/components/admin/team";
 import { Card, ErrorBox, Field, PageTitle, Spinner, Switch } from "@/components/admin/ui";
 import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/Toast";
+import { SystemCheck } from "@/components/admin/SystemCheck";
 
 type S = {
   store_name: string; tagline: string | null; address: string | null; phone_primary: string | null; phone_secondary: string | null;
@@ -205,6 +206,8 @@ export default function SettingsPage() {
             </div>
             <Field id="semail" label="Customer support email" type="email" value={f.support_email} onChange={set("support_email")} maxLength={120} />
           </Section>
+
+          <SystemCheck />
 
           <Section icon="alert" color="bg-rose-600 text-white" title="Stock alerts">
             <Field id="low" label="Warn me when stock is at or below" type="number" inputMode="numeric" value={f.low_stock} onChange={set("low_stock")} />
