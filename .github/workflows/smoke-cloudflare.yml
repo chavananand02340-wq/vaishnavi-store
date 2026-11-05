@@ -20,5 +20,5 @@ jobs:
           for p in / /terms /cart /login /admin /api/health; do
             code=$(curl -s -o /tmp/body -w '%{http_code} %{time_total}s' "$B$p")
             echo "=== $p -> $code"
-            head -c 600 /tmp/body | tr '\n' ' '; echo
+            grep -o -E 'Shop by category|being set up|Something went wrong|Application error|Diwali|Order emails|Owner and counter login' /tmp/body | sort | uniq -c | tr '\n' ' '; echo
           done
