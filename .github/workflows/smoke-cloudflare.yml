@@ -16,9 +16,13 @@ jobs:
     steps:
       - name: Fetch pages
         run: |
-          B=https://vaishnavi-store.chavananand02340.workers.dev
+          B=https://vaishnavistores.shop
           for p in / /terms /cart /login /admin /api/health; do
             code=$(curl -s -o /tmp/body -w '%{http_code} %{time_total}s' "$B$p")
             echo "=== $p -> $code"
             grep -o -E 'Shop by category|being set up|Something went wrong|Application error|Diwali|Order emails|Owner and counter login' /tmp/body | sort | uniq -c | tr '\n' ' '; echo
           done
+          echo "=== www redirect"
+          curl -s -o /dev/null -w '%{http_code} -> %{redirect_url}\n' "https://www.vaishnavistores.shop/order?t=abc"
+          echo "=== served by"
+          curl -sI "$B/" | grep -iE '^(server|cf-ray|x-nf-request-id|x-opennext)' || true
