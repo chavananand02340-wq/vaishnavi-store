@@ -6,7 +6,7 @@ import { Icon } from "@/components/Icon";
 
 export const PIN_KEY = "vs-pin";
 
-export function PincodeCheck() {
+export function PincodeCheck({ onDone }: { onDone?: () => void } = {}) {
   const [pin, setPin] = useState("");
   const [saved, setSaved] = useState<string | null>(null);
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
@@ -37,8 +37,10 @@ export function PincodeCheck() {
       } catch {
         /* ignore */
       }
+      window.dispatchEvent(new CustomEvent("vs-local", { detail: PIN_KEY }));
       setSaved(pin);
       setResult(null);
+      onDone?.();
     } else {
       setResult({ ok: false, text: `We don't deliver to ${pin} yet. Call or WhatsApp us to check.` });
     }

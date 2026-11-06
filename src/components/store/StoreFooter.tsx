@@ -8,6 +8,7 @@ import { Icon } from "@/components/Icon";
 import { WaIcon } from "@/components/WaIcon";
 import { useCart } from "./cart";
 import { LEGAL_LINKS } from "@/lib/legal-links";
+import { TrustBadges } from "./TrustBadges";
 
 
 export function StoreFooter() {
@@ -17,7 +18,7 @@ export function StoreFooter() {
   const wa = waLink(s.whatsapp_number, `Hello ${s.store_name}, I want to place an order.`);
 
   return (
-    <footer className="mt-auto bg-ink pb-28 text-white/75">
+    <footer className="mt-auto bg-ink pb-20 text-white/75 md:pb-28">
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-9 md:grid-cols-[1.3fr_1fr_1fr]">
         <div>
           <span className="inline-block rounded-2xl bg-white px-4 py-3">
@@ -64,6 +65,10 @@ export function StoreFooter() {
             ))}
           </ul>
         </nav>
+      </div>
+      <div className="mx-auto max-w-6xl px-4 pb-6">
+        <p className="mb-2 text-[13px] font-bold uppercase tracking-wide text-white/60">We accept</p>
+        <TrustBadges dark online={Boolean(s.razorpay_enabled)} cod={s.cod_enabled} fssai={s.fssai_number} />
       </div>
       <div className="border-t border-white/10">
         <div className="mx-auto flex max-w-6xl flex-wrap gap-x-5 gap-y-1 px-4 py-4 text-[13px] text-white/55">

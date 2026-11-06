@@ -12,6 +12,8 @@ import { PageBar } from "@/components/store/PageBar";
 import { Bill } from "@/components/store/Bill";
 import { CouponBox } from "@/components/store/CouponBox";
 import { COUPON_KEY } from "@/components/store/SaleHero";
+import { saveOrder } from "@/lib/local";
+import { TrustBadges } from "@/components/store/TrustBadges";
 import { Icon } from "@/components/Icon";
 
 const DETAILS_KEY = "vs-details-v1";
@@ -152,6 +154,13 @@ export default function CheckoutPage() {
         /* ignore */
       }
       if (!res.duplicate && payment !== "online") requestOrderEmail(res.public_token);
+      saveOrder({
+        token: res.public_token,
+        no: res.order_no,
+        at: new Date().toISOString(),
+        total: q?.total_paise ?? 0,
+        lines: lines.map((l) => ({ variantId: l.variantId, productId: l.productId, name: l.name, label: l.label, price: l.price, image: l.image, qty: l.qty })),
+      });
       clear();
       router.replace(`/order?t=${res.public_token}&new=1${payment === "online" ? "&pay=1" : ""}`);
       return;
@@ -236,6 +245,8 @@ export default function CheckoutPage() {
           )}
           {q && !q.cod_available && !q.upi_available && !q.online_available && <p className="text-[15px] text-rose-700">Online payment is off right now. Please call the shop.</p>}
         </section>
+
+        <TrustBadges compact online={Boolean(q?.online_available)} />
 
         <section className="rounded-[var(--radius-card)] bg-white p-4 ring-1 ring-line">
           <details>

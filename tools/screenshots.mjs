@@ -49,6 +49,9 @@ await shoot(store, "s07-checkout", "/checkout", {
   wait: 1500,
 });
 await shoot(store, "s10-terms", "/terms", { full: false });
+await shoot(store, "s13-categories", "/categories", { full: false });
+await shoot(store, "s14-orders", "/orders", { full: false });
+await shoot(store, "s15-search-empty", "/search", { full: false });
 await shoot(store, "s11-refund", "/refund-policy");
 await shoot(store, "s12-footer", "/about");
 await shoot(store, "s08-order", "/order?t=00000000-0000-4000-8000-000000000000&new=1", { wait: 1500 });

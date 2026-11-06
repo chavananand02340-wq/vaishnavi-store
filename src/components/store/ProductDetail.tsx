@@ -6,7 +6,7 @@ import { formatPaise } from "@/lib/money";
 import { waLink, type CardProduct } from "@/lib/cards";
 import { Icon } from "@/components/Icon";
 import { WaIcon } from "@/components/WaIcon";
-import { AddButton, ProductImage } from "./ProductCard";
+import { AddButton, ProductImage, HeartButton } from "./ProductCard";
 import { useCart } from "./cart";
 import { FreeDeliveryMeter } from "./CartBar";
 
@@ -26,6 +26,7 @@ export function ProductDetail({ product, images, description }: { product: CardP
           <div className="relative aspect-[4/3] overflow-hidden rounded-[var(--radius-card)] bg-white ring-1 ring-line md:aspect-square">
             <ProductImage src={images[shown] ?? null} alt={product.name} className="p-4" />
             {off >= 5 && <span className="absolute left-0 top-4 rounded-r-lg bg-kumkum-600 px-2.5 py-1 text-[14px] font-extrabold text-white">{off}% off</span>}
+            <HeartButton productId={product.id} name={product.name} className="absolute right-3 top-3 size-10" />
           </div>
           {images.length > 1 && (
             <div className="no-scrollbar mt-2 flex gap-2 overflow-x-auto">
@@ -54,6 +55,7 @@ export function ProductDetail({ product, images, description }: { product: CardP
               {v.compare && <span className="text-[16px] text-muted line-through">{formatPaise(v.compare)}</span>}
               {v.compare && <span className="text-[15px] font-bold text-kumkum-600">You save {formatPaise(v.compare - v.price)}</span>}
             </p>
+            {v.stock > 0 && v.stock <= 5 && <p className="mt-1 text-[14px] font-bold text-amber-700">Hurry, only {v.stock} left</p>}
           </div>
 
           <fieldset>
@@ -91,7 +93,7 @@ export function ProductDetail({ product, images, description }: { product: CardP
       </div>
 
       {/* Sticky add bar */}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-white/95 px-4 pb-[max(.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur">
+      <div className="fixed inset-x-0 bottom-[calc(64px+env(safe-area-inset-bottom))] z-40 border-t border-line bg-white/95 px-4 pb-3 pt-3 backdrop-blur md:bottom-0 md:pb-[max(.75rem,env(safe-area-inset-bottom))]">
         <div className="mx-auto flex max-w-6xl items-center gap-3">
           <div className="min-w-0 flex-1">
             {count > 0 ? (

@@ -103,7 +103,7 @@ export default function CartPage() {
         </section>
       </main>
 
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-white px-3 pb-[max(.75rem,env(safe-area-inset-bottom))] pt-3">
+      <div className="fixed inset-x-0 bottom-[calc(64px+env(safe-area-inset-bottom))] z-40 border-t border-line bg-white px-3 pb-3 pt-3 md:bottom-0 md:pb-[max(.75rem,env(safe-area-inset-bottom))]">
         <div className="mx-auto max-w-3xl">
           {open === false && <p className="mb-2 text-center text-[14px] font-semibold text-rose-700">The shop is closed now. Your cart is saved for later.</p>}
           {quote?.ok && quote.below_min_order && quote.min_order_paise != null && (

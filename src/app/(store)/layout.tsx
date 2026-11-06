@@ -1,6 +1,7 @@
 import { getSettings } from "@/lib/store-data";
 import { CartProvider } from "@/components/store/cart";
 import { CartBar } from "@/components/store/CartBar";
+import { BottomNav } from "@/components/store/BottomNav";
 import { StoreFooter } from "@/components/store/StoreFooter";
 import { ToastProvider } from "@/components/Toast";
 
@@ -13,11 +14,12 @@ export default async function StoreLayout({ children }: { children: React.ReactN
   return (
     <ToastProvider>
       <CartProvider settings={settings}>
-        <div className="flex min-h-dvh flex-col">
+        <div className="flex min-h-dvh flex-col pb-[calc(64px+env(safe-area-inset-bottom))] md:pb-0">
           {children}
           <StoreFooter />
         </div>
         <CartBar />
+        <BottomNav />
       </CartProvider>
     </ToastProvider>
   );

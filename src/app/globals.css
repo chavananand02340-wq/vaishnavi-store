@@ -146,3 +146,16 @@ body {
 
 /* Lazy render: shelves further down the page are only drawn when scrolled near */
 .lazy-section { content-visibility: auto; contain-intrinsic-size: auto 420px; }
+
+/* Loading placeholders */
+.skeleton { background: linear-gradient(90deg, #eceef1 0%, #f6f7f9 40%, #eceef1 80%); background-size: 200% 100%; animation: shimmer 1.2s linear infinite; }
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }
+
+/* Heart tap */
+@keyframes heart-pop { 0% { transform: scale(1); } 40% { transform: scale(1.35); } 100% { transform: scale(1); } }
+.heart-pop { animation: heart-pop .35s ease-out; }
+
+/* Bottom sheet */
+@keyframes sheet-up { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+.sheet-up { animation: sheet-up 220ms ease-out; }

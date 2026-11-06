@@ -6,12 +6,13 @@ import { formatPaise } from "@/lib/money";
 import type { CardProduct } from "@/lib/cards";
 import { Icon } from "@/components/Icon";
 import { MAX_QTY, useCart } from "./cart";
+import { useFavourites } from "@/lib/local";
 
 export function Stepper({ qty, max, onChange, label, big = false }: { qty: number; max: number; onChange: (q: number) => void; label: string; big?: boolean }) {
   const cap = Math.min(MAX_QTY, max);
   const size = big ? "h-12 text-[17px]" : "h-9 text-[15px]";
   return (
-    <div className={`flex items-center overflow-hidden rounded-lg bg-brand-700 text-white ${size}`} role="group" aria-label={`Quantity of ${label}`}>
+    <div className={`animate-pop flex items-center overflow-hidden rounded-lg bg-brand-700 text-white ${size}`} role="group" aria-label={`Quantity of ${label}`}>
       <button type="button" className={`flex h-full items-center justify-center ${big ? "w-12" : "w-9"}`} onClick={() => onChange(qty - 1)} aria-label="Remove one">
         <Icon name="minus" className="size-4" strokeWidth={3} />
       </button>
@@ -45,12 +46,19 @@ export function AddButton({ product, variantId, big = false }: { product: CardPr
     return (
       <button
         type="button"
-        onClick={() => add({ variantId: v.id, productId: product.id, name: product.name, label: v.label, price: v.price, image: product.image, max: v.stock })}
+        onClick={() => {
+          add({ variantId: v.id, productId: product.id, name: product.name, label: v.label, price: v.price, image: product.image, max: v.stock });
+          try {
+            navigator.vibrate?.(15);
+          } catch {
+            /* no vibration */
+          }
+        }}
         className={`rounded-lg border-[1.5px] border-brand-700 bg-brand-50 font-extrabold text-brand-700 transition hover:bg-brand-100 active:scale-95 ${
           big ? "h-12 px-8 text-[17px]" : "h-9 px-4 text-[15px]"
         }`}
       >
-        Add
+        ADD
       </button>
     );
   }
@@ -68,6 +76,28 @@ export function ProductImage({ src, alt, className = "" }: { src: string | null;
   );
 }
 
+export function HeartButton({ productId, name, className = "" }: { productId: string; name: string; className?: string }) {
+  const favs = useFavourites();
+  const [pop, setPop] = useState(0);
+  const on = favs.ready && favs.has(productId);
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        favs.toggle(productId);
+        setPop((n) => n + 1);
+      }}
+      aria-pressed={on}
+      aria-label={on ? `Remove ${name} from favourites` : `Save ${name} to favourites`}
+      className={`flex size-8 items-center justify-center rounded-full bg-white/90 shadow-sm ring-1 ring-black/5 ${className}`}
+    >
+      <Icon key={pop} name="heart" className={`size-[18px] ${pop ? "heart-pop" : ""} ${on ? "text-rose-600" : "text-neutral-400"}`} fill={on ? "currentColor" : "none"} strokeWidth={2.2} />
+    </button>
+  );
+}
+
 export function ProductCard({ product, width }: { product: CardProduct; width?: string }) {
   const first = product.variants.find((v) => v.stock > 0) ?? product.variants[0];
   const [variantId, setVariantId] = useState(first.id);
@@ -75,13 +105,17 @@ export function ProductCard({ product, width }: { product: CardProduct; width?: 
   const off = v.compare ? Math.round(((v.compare - v.price) / v.compare) * 100) : 0;
 
   return (
-    <article className={`flex flex-col rounded-[var(--radius-card)] bg-white p-2 ring-1 ring-line ${width ?? ""}`}>
+    <article className={`relative flex flex-col rounded-[var(--radius-card)] bg-white p-2 ring-1 ring-line transition hover:shadow-[0_10px_24px_-14px_rgba(0,0,0,.35)] ${width ?? ""}`}>
       <Link href={`/p/${product.id}`} className="relative block aspect-square overflow-hidden rounded-[10px] bg-[#f6f8f5]">
         <ProductImage src={product.image} alt={product.name} className="p-1.5" />
         {off >= 5 && (
           <span className="absolute left-1.5 top-1.5 rounded-full bg-kumkum-600 px-2 py-0.5 text-[11.5px] font-extrabold text-white shadow-sm">{off}% OFF</span>
         )}
+        {v.stock > 0 && v.stock <= 5 && (
+          <span className="absolute bottom-1.5 left-1.5 rounded-full bg-amber-400 px-2 py-0.5 text-[11px] font-extrabold text-amber-950 shadow-sm">Only {v.stock} left</span>
+        )}
       </Link>
+      <HeartButton productId={product.id} name={product.name} className="absolute right-3.5 top-3.5" />
 
       <div className="flex flex-1 flex-col px-1 pt-2">
         <Link href={`/p/${product.id}`} className="min-h-[2.6em]">
@@ -110,7 +144,7 @@ export function ProductCard({ product, width }: { product: CardProduct; width?: 
 
         <div className="mt-auto flex items-end justify-between gap-1.5 pt-2">
           <div className="leading-tight">
-            <p className="text-[15px] font-extrabold">{formatPaise(v.price)}</p>
+            <p className="text-[17px] font-extrabold tracking-tight">{formatPaise(v.price)}</p>
             {v.compare ? <p className="text-[12px] text-muted line-through">{formatPaise(v.compare)}</p> : null}
           </div>
           <AddButton product={product} variantId={v.id} />

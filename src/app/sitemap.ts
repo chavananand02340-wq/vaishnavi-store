@@ -11,6 +11,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   if (!site) return [];
   const entries: MetadataRoute.Sitemap = [
     { url: site, changeFrequency: "daily", priority: 1 },
+    { url: `${site}/categories`, changeFrequency: "daily", priority: 0.8 },
     ...LEGAL_LINKS.map((l) => ({ url: `${site}${l.href}`, changeFrequency: "monthly" as const, priority: 0.3 })),
   ];
   if (!url || !key) return entries;

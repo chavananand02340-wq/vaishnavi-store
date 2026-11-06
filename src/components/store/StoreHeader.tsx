@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { formatTime, isOpenNow } from "@/lib/hours";
 import { formatPaise } from "@/lib/money";
@@ -9,6 +9,7 @@ import { Icon } from "@/components/Icon";
 import { cleanTerm, searchProducts } from "@/lib/search";
 import type { CardProduct } from "@/lib/cards";
 import { useCart } from "./cart";
+import { PIN_KEY, PincodeCheck } from "./PincodeCheck";
 
 /** Re-computes open/closed in the browser so cached pages stay accurate. */
 export function useOpenNow() {
@@ -29,6 +30,8 @@ const HINTS = ["atta", "rice", "dal", "oil", "sugar", "biscuits", "milk", "soap"
 function SearchBox() {
   const router = useRouter();
   const params = useSearchParams();
+  const path = usePathname();
+  const focusNow = path === "/search" && !params.get("q");
   const [q, setQ] = useState(params.get("q") ?? "");
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<CardProduct[]>([]);
@@ -93,6 +96,7 @@ function SearchBox() {
             setOpen(true);
           }}
           onFocus={() => setOpen(true)}
+          autoFocus={focusNow}
           onBlur={() => setTimeout(() => setOpen(false), 150)}
           placeholder={`Search for "${HINTS[hint]}"`}
           aria-label="Search products"
@@ -157,6 +161,58 @@ export function CartButton() {
   );
 }
 
+/** "Deliver to 442001" chip; opens a small sheet to check or change the PIN code. */
+function DeliverChip() {
+  const [pin, setPin] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const read = () => {
+      try {
+        const p = window.localStorage.getItem(PIN_KEY);
+        setPin(p && /^\d{6}$/.test(p) ? p : null);
+      } catch {
+        setPin(null);
+      }
+    };
+    read();
+    const on = (e: Event) => {
+      const k = e instanceof StorageEvent ? e.key : (e as CustomEvent<string>).detail;
+      if (k === PIN_KEY) read();
+    };
+    window.addEventListener("storage", on);
+    window.addEventListener("vs-local", on);
+    return () => {
+      window.removeEventListener("storage", on);
+      window.removeEventListener("vs-local", on);
+    };
+  }, []);
+  return (
+    <>
+      <button type="button" onClick={() => setOpen(true)} className="flex min-w-0 items-center gap-1 rounded-full bg-page px-2.5 py-1.5 text-left ring-1 ring-line">
+        <Icon name="pin" className="size-4 shrink-0 text-brand-600" strokeWidth={2.4} />
+        <span className="min-w-0 leading-tight">
+          <span className="block text-[10.5px] font-semibold uppercase tracking-wide text-muted">Deliver to</span>
+          <span className="block truncate text-[13.5px] font-extrabold">{pin ?? "Check PIN"}</span>
+        </span>
+        <Icon name="right" className="size-3.5 shrink-0 rotate-90 text-muted" strokeWidth={2.6} />
+      </button>
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center" onClick={() => setOpen(false)} role="dialog" aria-modal="true" aria-label="Delivery PIN code">
+          <div className="sheet-up w-full max-w-md rounded-t-3xl bg-page p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-3 flex items-center justify-between">
+              <p className="font-display text-[19px] font-extrabold">Where should we deliver?</p>
+              <button type="button" onClick={() => setOpen(false)} className="rounded-full p-1.5 text-muted" aria-label="Close">
+                <Icon name="x" className="size-5" />
+              </button>
+            </div>
+            <PincodeCheck onDone={() => setTimeout(() => setOpen(false), 600)} />
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 export function StoreHeader({ compact = false }: { compact?: boolean }) {
   const { settings: s } = useCart();
   const open = useOpenNow();
@@ -170,7 +226,9 @@ export function StoreHeader({ compact = false }: { compact?: boolean }) {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/brand/logo-compact.png" alt={name} width={403} height={144} className={compact ? "h-9 w-auto" : "h-12 w-auto"} />
           </Link>
-          <div className="min-w-0 flex-1" />
+          <div className="flex min-w-0 flex-1 justify-end">
+            <DeliverChip />
+          </div>
           <CartButton />
         </div>
       </header>

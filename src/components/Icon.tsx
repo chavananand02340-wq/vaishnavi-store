@@ -31,6 +31,11 @@ const PATHS: Record<string, string> = {
   percent: "M19 5 5 19M7.5 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Zm9 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z",
   doc: "M7 3h7l5 5v13H7V3Zm7 0v5h5M10 13h6M10 17h6",
   mail: "M3 6h18v12H3V6Zm0 0 9 7 9-7",
+  grid: "M4 4h7v7H4V4Zm9 0h7v7h-7V4ZM4 13h7v7H4v-7Zm9 0h7v7h-7v-7Z",
+  heart: "M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.2a4.3 4.3 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20Z",
+  shield: "M12 3 5 6v5.5c0 4.3 3 8 7 9.5 4-1.5 7-5.2 7-9.5V6l-7-3Zm-3 9 2 2 4-4",
+  card: "M3 6h18v12H3V6Zm0 4h18M7 15h3",
+  bank: "M3 9 12 4l9 5H3Zm2 0v8m4-8v8m6-8v8m4-8v8M3 20h18",
   star: "m12 4 2.5 5 5.5.8-4 3.9.9 5.5-4.9-2.6-4.9 2.6.9-5.5-4-3.9L9.5 9 12 4Z",
   gift: "M4 11h16v9H4v-9Zm-1-4h18v4H3V7Zm9 0v13M12 7c-1.5-3-5-3-5-1s3 1 5 1Zm0 0c1.5-3 5-3 5-1s-3 1-5 1Z",
 };
@@ -42,17 +47,19 @@ export function Icon({
   className = "size-5",
   strokeWidth = 2,
   label,
+  fill,
 }: {
   name: IconName | string;
   className?: string;
   strokeWidth?: number;
   label?: string;
+  fill?: string;
 }) {
   return (
     <svg
       viewBox="0 0 24 24"
       className={className}
-      fill="none"
+      fill={fill ?? "none"}
       stroke="currentColor"
       strokeWidth={strokeWidth}
       strokeLinecap="round"
