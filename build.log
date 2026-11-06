@@ -1,0 +1,76 @@
+
+> vaishnavi-store@0.1.0 build
+> next build
+
+⚠ No build cache found. Please configure build caching for faster rebuilds. Read more: https://nextjs.org/docs/messages/no-cache
+   ▲ Next.js 15.5.29
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 10.7s
+   Skipping linting
+   Checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/47) ...
+   Generating static pages (11/47) 
+   Generating static pages (23/47) 
+   Generating static pages (35/47) 
+ ✓ Generating static pages (47/47)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                 Size  First Load JS  Revalidate  Expire
+┌ ○ /                                    6.29 kB         189 kB         15m      1y
+├ ○ /_not-found                            162 B         103 kB
+├ ○ /about                                 187 B         183 kB         15m      1y
+├ ○ /admin                               3.39 kB         182 kB
+├ ○ /admin/banners                       5.91 kB         185 kB
+├ ○ /admin/categories                    4.04 kB         183 kB
+├ ○ /admin/coupons                       7.54 kB         182 kB
+├ ○ /admin/order                         4.86 kB         184 kB
+├ ○ /admin/orders                        6.17 kB         180 kB
+├ ○ /admin/pincodes                       2.6 kB         182 kB
+├ ○ /admin/products                      3.95 kB         183 kB
+├ ○ /admin/products/edit                 6.71 kB         186 kB
+├ ○ /admin/products/new                  3.88 kB         183 kB
+├ ○ /admin/settings                      5.37 kB         184 kB
+├ ƒ /api/health                            162 B         103 kB
+├ ƒ /api/order-email                       162 B         103 kB
+├ ƒ /api/pincode                           162 B         103 kB
+├ ƒ /api/razorpay/order                    162 B         103 kB
+├ ƒ /api/razorpay/verify                   162 B         103 kB
+├ ƒ /api/razorpay/webhook                  162 B         103 kB
+├ ƒ /api/revalidate                        162 B         103 kB
+├ ● /c/[slug]                            2.76 kB         185 kB         15m      1y
+├   ├ /c/atta-rice-dal                                                  15m      1y
+├   ├ /c/oil-ghee                                                       15m      1y
+├   ├ /c/masala-spices                                                  15m      1y
+├   └ [+5 more paths]
+├ ○ /cart                                6.05 kB         189 kB         15m      1y
+├ ○ /categories                            200 B         183 kB         15m      1y
+├ ○ /checkout                            14.2 kB         188 kB         15m      1y
+├ ○ /contact                               200 B         183 kB         15m      1y
+├ ○ /favourites                          3.79 kB         186 kB         15m      1y
+├ ○ /icon.png                                0 B            0 B
+├ ○ /login                               1.72 kB         173 kB
+├ ○ /manifest.webmanifest                  162 B         103 kB
+├ ○ /order                               18.2 kB         193 kB         15m      1y
+├ ○ /orders                              2.93 kB         185 kB         15m      1y
+├ ● /p/[id]                              4.65 kB         187 kB
+├ ○ /privacy                               200 B         183 kB         15m      1y
+├ ○ /refund-policy                         200 B         183 kB         15m      1y
+├ ○ /robots.txt                            162 B         103 kB
+├ ○ /search                              3.97 kB         186 kB         15m      1y
+├ ○ /shipping-policy                       200 B         183 kB         15m      1y
+├ ○ /sitemap.xml                           162 B         103 kB          1h      1y
+├ ○ /staff                               2.83 kB         187 kB
+└ ○ /terms                                 187 B         183 kB         15m      1y
++ First Load JS shared by all             103 kB
+  ├ chunks/1255-b84741b894bb9354.js      46.6 kB
+  ├ chunks/4bd1b696-f785427dddbba9fb.js  54.2 kB
+  └ other shared chunks (total)          1.93 kB
+
+
+○  (Static)   prerendered as static content
+●  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ƒ  (Dynamic)  server-rendered on demand
+
