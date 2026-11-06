@@ -82,6 +82,7 @@ export function OrderCard({
   const [busy, setBusy] = useState<string | null>(null);
   const [eta, setEta] = useState(o.eta_minutes ?? defaultEta);
   const [cancelling, setCancelling] = useState(false);
+  const [armed, setArmed] = useState<number | null>(null);
   const [reason, setReason] = useState("");
   const next = NEXT[o.status];
   const editable = o.status === "new" || o.status === "confirmed";
@@ -136,21 +137,31 @@ export function OrderCard({
             <span className={`min-w-0 flex-1 text-[15px] leading-snug ${i.is_unavailable ? "text-muted line-through" : "font-semibold"}`}>
               {i.product_name} <span className="font-normal text-muted">{i.variant_label}</span>
             </span>
-            {editable && !i.is_unavailable && liveItems > 1 ? (
+            <span className="shrink-0 text-[14px] text-muted">{i.is_unavailable ? "Removed" : formatPaise(i.line_total_paise)}</span>
+            {editable && !i.is_unavailable && liveItems > 1 && (
               <button
                 type="button"
                 disabled={busy !== null}
-                onClick={() => call(`na-${i.id}`, "mark_item_unavailable", { p_order_id: o.id, p_item_id: i.id }, "Item removed, bill updated")}
-                className="shrink-0 rounded-lg border border-line bg-white px-2 py-1 text-[12px] font-semibold text-muted"
+                aria-label={`Remove ${i.product_name} from this order`}
+                onClick={() => {
+                  if (armed !== i.id) {
+                    setArmed(i.id);
+                    return;
+                  }
+                  setArmed(null);
+                  call(`na-${i.id}`, "mark_item_unavailable", { p_order_id: o.id, p_item_id: i.id }, "Item removed, bill updated");
+                }}
+                className={`shrink-0 rounded-lg px-2 py-1 text-[12px] font-bold ${armed === i.id ? "bg-rose-600 text-white" : "bg-rose-50 text-rose-700 ring-1 ring-rose-200"}`}
               >
-                {busy === `na-${i.id}` ? "…" : "Not available"}
+                {busy === `na-${i.id}` ? "…" : armed === i.id ? "Sure? Remove" : "Remove"}
               </button>
-            ) : (
-              <span className="shrink-0 text-[14px] text-muted">{formatPaise(i.line_total_paise)}</span>
             )}
           </li>
         ))}
       </ul>
+      {editable && liveItems > 1 && (
+        <p className="mx-4 mt-1 text-[12px] text-muted">Item not on the shelf? Tap Remove. The bill updates on its own.</p>
+      )}
 
       {/* Customer */}
       <div className="px-4 pt-3">
