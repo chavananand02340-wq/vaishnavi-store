@@ -21,7 +21,7 @@ const ok = (cond, note) => ({ ok: Boolean(cond), note });
 
 // ---------- Pages ----------
 const html = {};
-for (const p of ["/", "/about", "/terms", "/privacy", "/refund-policy", "/shipping-policy", "/contact", "/cart", "/checkout", "/search?q=rice", "/login", "/admin", "/staff", "/sitemap.xml", "/robots.txt"]) {
+for (const p of ["/", "/about", "/terms", "/privacy", "/refund-policy", "/shipping-policy", "/contact", "/cart", "/checkout", "/categories", "/orders", "/favourites", "/search", "/search?q=rice", "/login", "/admin", "/staff", "/sitemap.xml", "/robots.txt"]) {
   await check(`page ${p}`, async () => {
     const t = Date.now();
     const r = await get(p);
