@@ -1,5 +1,6 @@
 -- Vaishnavi Store setup — part 23: "We're packing your order" email + richer order emails
 -- Run in Supabase → SQL Editor, after part 22. Safe to run again.
+-- If you already ran part 26, run 26 again after this (it adds the map location to emails).
 
 alter table public.orders add column if not exists packing_notified_at timestamptz;
 

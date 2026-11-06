@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { formatPaise } from "@/lib/money";
 import { placeOrder, requestOrderEmail, type Quote } from "@/lib/checkout";
 import { useCart } from "@/components/store/cart";
@@ -13,14 +13,26 @@ import { Bill } from "@/components/store/Bill";
 import { CouponBox } from "@/components/store/CouponBox";
 import { COUPON_KEY } from "@/components/store/SaleHero";
 import { saveOrder } from "@/lib/local";
+import { pinInfo, type Place, type Spot } from "@/lib/geo";
+import { LocationButton } from "@/components/store/LocationButton";
+import { supabase } from "@/lib/supabase/browser";
 import { TrustBadges } from "@/components/store/TrustBadges";
 import { Icon } from "@/components/Icon";
 
 const DETAILS_KEY = "vs-details-v1";
+
+/** House + street as typed, then city and state (if not already written), max 300 characters. */
+function fullAddress(d: { address: string; city: string; state: string }) {
+  let a = d.address.trim().replace(/^,\s*/, "");
+  for (const part of [d.city.trim(), d.state.trim()]) {
+    if (part && !a.toLowerCase().includes(part.toLowerCase())) a += `, ${part}`;
+  }
+  return a.slice(0, 300);
+}
 const IDEM_KEY = "vs-idem";
 
-type Details = { name: string; phone: string; email: string; address: string; landmark: string; pincode: string; instructions: string };
-const EMPTY: Details = { name: "", phone: "", email: "", address: "", landmark: "", pincode: "", instructions: "" };
+type Details = { name: string; phone: string; email: string; address: string; landmark: string; pincode: string; city: string; state: string; instructions: string };
+const EMPTY: Details = { name: "", phone: "", email: "", address: "", landmark: "", pincode: "", city: "", state: "", instructions: "" };
 
 function idempotencyKey(): string {
   try {
@@ -70,6 +82,38 @@ export default function CheckoutPage() {
   }, []);
 
   const pinValid = /^[1-9]\d{5}$/.test(d.pincode);
+  const [spot, setSpot] = useState<Spot | null>(null);
+  const [areas, setAreas] = useState<string[]>([]);
+
+  // PIN code → city, state and area names (fills empty boxes only).
+  useEffect(() => {
+    setAreas([]);
+    if (!pinValid) return;
+    let live = true;
+    pinInfo(d.pincode).then((r) => {
+      if (!live || !r.ok) return;
+      setAreas(r.areas ?? []);
+      setD((prev) => ({ ...prev, city: r.city ?? prev.city, state: r.state ?? prev.state }));
+    });
+    return () => {
+      live = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [d.pincode, pinValid]);
+
+  function applyPlace(p: Place) {
+    setD((prev) => {
+      const area = p.area && !prev.address.toLowerCase().includes(p.area.toLowerCase()) ? p.area : "";
+      return {
+        ...prev,
+        pincode: p.pincode ?? prev.pincode,
+        city: p.city ?? prev.city,
+        state: p.state ?? prev.state,
+        address: prev.address.trim() ? prev.address : area ? `, ${area}` : prev.address,
+      };
+    });
+    setTimeout(() => (document.getElementById("address") as HTMLTextAreaElement | null)?.focus(), 50);
+  }
   const { quote, loading, setQuote } = useQuote(pinValid ? d.pincode : null, coupon);
   const q: Quote | null = quote?.ok ? quote : null;
 
@@ -131,7 +175,7 @@ export default function CheckoutPage() {
       idempotencyKey: keyRef.current,
       name: d.name.trim(),
       phone: phoneDigits,
-      address: d.address.trim(),
+      address: fullAddress(d),
       landmark: d.landmark.trim(),
       pincode: d.pincode,
       instructions: d.instructions.trim(),
@@ -152,6 +196,16 @@ export default function CheckoutPage() {
         window.localStorage.removeItem(COUPON_KEY);
       } catch {
         /* ignore */
+      }
+      if (spot && !res.duplicate) {
+        try {
+          await Promise.race([
+            supabase().rpc("set_order_location", { p_token: res.public_token, p_lat: spot.lat, p_lng: spot.lng, p_accuracy_m: spot.accuracy }),
+            new Promise((r) => setTimeout(r, 3000)),
+          ]);
+        } catch {
+          /* location is a bonus; the address is already saved */
+        }
       }
       if (!res.duplicate && payment !== "online") requestOrderEmail(res.public_token);
       saveOrder({
@@ -200,8 +254,9 @@ export default function CheckoutPage() {
           <Field id="email" label="Email (optional)" hint="We'll email your order receipt." error={err("email")}>
             <input id="email" className="field" type="email" inputMode="email" autoComplete="email" value={d.email} onChange={set("email")} maxLength={120} placeholder="you@gmail.com" />
           </Field>
+          <LocationButton spot={spot} onSpot={setSpot} onPlace={applyPlace} />
           <Field id="address" label="House no., building, street, area" error={err("address")}>
-            <textarea id="address" className="field min-h-[84px]" autoComplete="street-address" value={d.address} onChange={set("address")} maxLength={300} />
+            <textarea id="address" className="field min-h-[84px]" autoComplete="street-address" value={d.address} onChange={set("address")} maxLength={240} placeholder="Flat 2, Lucky Tower, Station Road" />
           </Field>
           <div className="grid grid-cols-[1fr_8.5rem] gap-3">
             <Field id="landmark" label="Landmark (optional)">
@@ -209,6 +264,36 @@ export default function CheckoutPage() {
             </Field>
             <Field id="pincode" label="PIN code" error={err("pincode") ?? pinError}>
               <input id="pincode" className="field" inputMode="numeric" autoComplete="postal-code" value={d.pincode} onChange={set("pincode")} maxLength={6} />
+            </Field>
+          </div>
+          {areas.length > 0 && (
+            <div>
+              <p className="mb-1.5 text-[13px] font-semibold text-muted">Your area? Tap to add</p>
+              <div className="no-scrollbar -mx-4 flex gap-1.5 overflow-x-auto px-4">
+                {areas.map((a) => {
+                  const has = d.address.toLowerCase().includes(a.toLowerCase());
+                  return (
+                    <button
+                      key={a}
+                      type="button"
+                      disabled={has}
+                      onClick={() => setD((p) => ({ ...p, address: p.address.trim() ? `${p.address.trim().replace(/,$/, "")}, ${a}` : a }))}
+                      className={`shrink-0 rounded-full px-3 py-1.5 text-[13px] font-semibold ring-1 ${has ? "bg-emerald-50 text-emerald-800 ring-emerald-200" : "bg-white ring-line"}`}
+                    >
+                      {has ? "✓ " : "+ "}
+                      {a}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-3">
+            <Field id="city" label="City / District">
+              <input id="city" className="field" autoComplete="address-level2" value={d.city} onChange={set("city")} maxLength={60} placeholder="Wardha" />
+            </Field>
+            <Field id="state" label="State">
+              <input id="state" className="field" autoComplete="address-level1" value={d.state} onChange={set("state")} maxLength={60} placeholder="Maharashtra" />
             </Field>
           </div>
           <Field id="instructions" label="Note for the shop (optional)">

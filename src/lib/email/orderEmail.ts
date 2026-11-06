@@ -33,6 +33,9 @@ export type NotifyOrder = {
   store_phone: string | null;
   store_whatsapp?: string | null;
   store_address?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  location_accuracy_m?: number | null;
   items: { name: string; label: string; qty: number; unit_price_paise?: number; line_total_paise: number; unavailable?: boolean }[];
 };
 
@@ -154,13 +157,17 @@ export function orderEmailHtml(kind: EmailKind, o: NotifyOrder, siteUrl: string)
   } else {
     const callCust = `tel:+91${o.phone}`;
     const waCust = `https://wa.me/91${o.phone}?text=${encodeURIComponent(`Hello ${o.customer_name}, ${o.store_name} here about your order ${no}.`)}`;
-    const map = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${o.address_line} ${o.landmark ?? ""} ${o.pincode}`)}`;
+    const map =
+      o.lat != null && o.lng != null
+        ? `https://www.google.com/maps/dir/?api=1&destination=${o.lat},${o.lng}`
+        : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${o.address_line} ${o.landmark ?? ""} ${o.pincode}`)}`;
     hero = `<div style="font-size:40px;line-height:1">🔔</div>
       <h1 style="margin:10px 0 6px;font-size:24px;color:${INK}">New order ${no}: ${rupees(o.total_paise)}</h1>
       <p style="margin:0;color:${MUTED};font-size:15px;line-height:1.5">${esc(o.customer_name)} ordered at ${esc(when)}.<br>Payment: <b style="color:${INK}">${o.payment_method === "cod" ? "Cash on delivery" : o.payment_method === "online" ? (o.payment_status === "paid" ? "Paid online ✓" : "Online (not paid yet)") : "UPI (check your UPI app)"}</b></p>
       <p style="margin:16px 0 0">${button(`${siteUrl}/staff`, "Open live orders")}</p>`;
     body = `${itemsTable(o, true)}${box("Customer", address)}
-      <p style="margin:16px 0 0">${button(callCust, "📞 Call customer", "#f1f2f4", INK)}${button(waCust, "WhatsApp customer", "#25d366", "#073b20")}${button(map, "📍 Map", "#f1f2f4", INK)}</p>
+      <p style="margin:16px 0 0">${button(callCust, "📞 Call customer", "#f1f2f4", INK)}${button(waCust, "WhatsApp customer", "#25d366", "#073b20")}${button(map, o.lat != null ? "📍 Exact location" : "📍 Map", o.lat != null ? "#e30613" : "#f1f2f4", o.lat != null ? "#ffffff" : INK)}</p>
+      ${o.lat != null ? `<p style="margin:10px 0 0;font-size:13px;color:#b42318;font-weight:700">📍 Customer shared their live location${o.location_accuracy_m ? ` (±${o.location_accuracy_m} m)` : ""}.</p>` : ""}
       ${o.email ? `<p style="margin:10px 0 0;font-size:13px;color:${MUTED}">Customer email: ${esc(o.email)} (they got a receipt)</p>` : ""}`;
   }
 

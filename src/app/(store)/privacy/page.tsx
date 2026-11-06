@@ -13,6 +13,7 @@ export default async function PrivacyPage() {
       <h2>What we collect</h2>
       <ul>
         <li><b>Order details:</b> your name, mobile number, delivery address, landmark, PIN code, any note you add, and email if you give one.</li>
+        <li><b>Your location, only if you tap "Use my current location":</b> the map position of your phone at checkout, so our delivery person can find you. It is saved with that one order and shown only to the shop team. Your address and PIN code are looked up through free map and India Post services to fill city and state.</li>
         <li><b>What you ordered</b> and how you paid. For UPI we see the payment in our own UPI app; we never see your UPI PIN, bank or card details.</li>
         <li><b>On your phone only:</b> your cart, saved address and PIN code are kept in your browser so you don&apos;t have to type them again. You can clear them by clearing your browser data.</li>
       </ul>

@@ -82,7 +82,7 @@ function order(no, status, mins, items, extra = {}) {
   return {
     id: uuid(`o${no}`), order_no: no, public_token: uuid(`t${no}`), status, customer_name: extra.name ?? "Priya Deshmukh", phone: "9876543210",
     address_line: extra.address ?? "Flat 203, Sai Residency, Tukum", landmark: "near Tukum water tank", pincode: "442001", instructions: extra.note ?? null,
-    subtotal_paise: sub, delivery_fee_paise: fee, discount_paise: extra.disc ?? 0, coupon_code: extra.coupon ?? null, customer_email: null, total_paise: sub + fee - (extra.disc ?? 0), payment_method: extra.pay ?? "cod", payment_status: extra.paid ?? "unpaid",
+    subtotal_paise: sub, delivery_fee_paise: fee, discount_paise: extra.disc ?? 0, coupon_code: extra.coupon ?? null, customer_email: null, delivery_lat: extra.lat ?? null, delivery_lng: extra.lng ?? null, location_accuracy_m: extra.lat ? 12 : null, total_paise: sub + fee - (extra.disc ?? 0), payment_method: extra.pay ?? "cod", payment_status: extra.paid ?? "unpaid",
     upi_utr: extra.utr ?? null, eta_minutes: 30, cancel_reason: extra.reason ?? null, created_at: iso(mins), confirmed_at: status === "new" ? null : iso(mins - 3),
     order_items: its,
   };
@@ -90,7 +90,7 @@ function order(no, status, mins, items, extra = {}) {
 const orders = [
   order(1012, "new", 2, [[0, 0, 1], [1, 1, 1], [5, 0, 2]], { name: "Priya Deshmukh", note: "Please call before coming, 2nd floor" }),
   order(1011, "new", 6, [[11, 0, 3], [16, 0, 2]], { name: "Rahul Wankhede", address: "Plot 18, Babupeth" }),
-  order(1010, "confirmed", 14, [[14, 0, 1], [8, 0, 1], [12, 0, 1, true]], { name: "Sneha Patil", coupon: "DIWALI10", disc: 5200, pay: "upi", paid: "awaiting_verification", utr: "412345678901" }),
+  order(1010, "confirmed", 14, [[14, 0, 1], [8, 0, 1], [12, 0, 1, true]], { name: "Sneha Patil", lat: 20.7453, lng: 78.6022, coupon: "DIWALI10", disc: 5200, pay: "upi", paid: "awaiting_verification", utr: "412345678901" }),
   order(1009, "out_for_delivery", 28, [[6, 0, 1], [2, 0, 1]], { name: "Amit Gawande" }),
   order(1008, "delivered", 95, [[3, 0, 2], [9, 0, 1]], { name: "Kavita Bhoyar", paid: "paid" }),
   order(1007, "cancelled", 140, [[17, 0, 1]], { name: "Suresh Raut", reason: "Customer asked to cancel" }),
@@ -222,6 +222,7 @@ const server = http.createServer(async (req, res) => {
     }
     if (fn === "is_owner") return send(res, 200, roleFrom(req) === "owner");
     if (fn === "store_is_open") return send(res, 200, true);
+    if (fn === "set_order_location") return send(res, 200, true);
     return send(res, 200, { ok: true });
   }
 

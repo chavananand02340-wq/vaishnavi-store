@@ -28,6 +28,9 @@ export type OrderRow = {
   discount_paise: number;
   coupon_code: string | null;
   customer_email: string | null;
+  delivery_lat?: number | null;
+  delivery_lng?: number | null;
+  location_accuracy_m?: number | null;
   total_paise: number;
   payment_method: "cod" | "upi" | "online";
   payment_status: "unpaid" | "awaiting_verification" | "paid";
@@ -40,7 +43,7 @@ export type OrderRow = {
 };
 
 export const ORDER_SELECT =
-  "id, order_no, public_token, status, customer_name, phone, address_line, landmark, pincode, instructions, subtotal_paise, delivery_fee_paise, discount_paise, coupon_code, customer_email, total_paise, payment_method, payment_status, upi_utr, eta_minutes, cancel_reason, created_at, confirmed_at, order_items(id, product_name, variant_label, qty, unit_price_paise, line_total_paise, is_unavailable)";
+  "*, order_items(id, product_name, variant_label, qty, unit_price_paise, line_total_paise, is_unavailable)";
 
 const NEXT: Partial<Record<OrderRow["status"], { to: string; label: string; icon: string }>> = {
   new: { to: "confirmed", label: "Confirm order", icon: "check" },
@@ -170,6 +173,11 @@ export function OrderCard({
           {o.address_line}
           {o.landmark ? ` (${o.landmark})` : ""}, {o.pincode}
         </p>
+        {o.delivery_lat != null && (
+          <p className="mt-1 flex items-center gap-1 text-[13px] font-semibold text-rose-700">
+            <Icon name="pin" className="size-3.5" /> Customer shared live location{o.location_accuracy_m ? ` (±${o.location_accuracy_m} m)` : ""}
+          </p>
+        )}
         {o.instructions && <p className="mt-2 rounded-lg bg-haldi-100 px-3 py-2 text-[14px] font-semibold text-haldi-700">Note: {o.instructions}</p>}
         <div className="mt-3 grid grid-cols-3 gap-2">
           <a href={`tel:+91${o.phone}`} className="flex h-11 items-center justify-center gap-1.5 rounded-xl bg-sky-50 text-[14px] font-bold text-sky-800 ring-1 ring-sky-200">
@@ -178,8 +186,13 @@ export function OrderCard({
           <a href={wa} target="_blank" rel="noopener" className="flex h-11 items-center justify-center gap-1.5 rounded-xl bg-[#25d366] text-[14px] font-bold text-[#073b20]">
             <WaIcon className="size-4" /> WhatsApp
           </a>
-          <a href={maps} target="_blank" rel="noopener" className="flex h-11 items-center justify-center gap-1.5 rounded-xl bg-slate-100 text-[14px] font-bold text-slate-800 ring-1 ring-slate-200">
-            <Icon name="pin" className="size-4" /> Map
+          <a
+            href={o.delivery_lat != null && o.delivery_lng != null ? `https://www.google.com/maps/dir/?api=1&destination=${o.delivery_lat},${o.delivery_lng}` : maps}
+            target="_blank"
+            rel="noopener"
+            className={`flex h-11 items-center justify-center gap-1.5 rounded-xl text-[14px] font-bold ring-1 ${o.delivery_lat != null ? "bg-rose-600 text-white ring-rose-600" : "bg-slate-100 text-slate-800 ring-slate-200"}`}
+          >
+            <Icon name="pin" className="size-4" /> {o.delivery_lat != null ? "Exact spot" : "Map"}
           </a>
         </div>
       </div>

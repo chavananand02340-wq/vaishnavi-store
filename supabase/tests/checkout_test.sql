@@ -190,3 +190,12 @@ select pg_temp.check((public.mark_online_paid(:'sec', 'order_TEST123', 'pay_1', 
 reset role;
 select pg_temp.check((select payment_status = 'paid' and paid_at is not null from public.orders where public_token = :'otok'), 'order is paid');
 update public.store_settings set razorpay_enabled = false where id = 1;
+
+-- ---------- Order location ----------
+set role anon;
+set request.jwt.claim.sub = '';
+select pg_temp.check(public.set_order_location(:'otok', 99, 79) = false, 'location outside India refused');
+select pg_temp.check(public.set_order_location(:'otok', 20.7453, 78.6022, 15), 'location saved');
+select pg_temp.check(public.set_order_location(:'otok', 20.1, 78.1, 15) = false, 'location saved only once');
+reset role;
+select pg_temp.check((select delivery_lat = 20.7453 from public.orders where public_token = :'otok'), 'location stored');
