@@ -100,7 +100,7 @@ function SearchBox() {
           onBlur={() => setTimeout(() => setOpen(false), 150)}
           placeholder={`Search for "${HINTS[hint]}"`}
           aria-label="Search products"
-          className="min-w-0 flex-1 bg-transparent px-3 py-3 text-[16px] font-medium text-ink outline-none placeholder:font-normal placeholder:text-neutral-500"
+          className="min-w-0 flex-1 bg-transparent px-3 py-3 text-[16px] font-medium text-ink outline-none focus-visible:outline-none placeholder:font-normal placeholder:text-neutral-500"
         />
         {q && (
           <button type="button" onClick={() => setQ("")} className="px-2 text-muted" aria-label="Clear search">

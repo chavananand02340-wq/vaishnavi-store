@@ -18,7 +18,7 @@ export function StoreFooter() {
   const wa = waLink(s.whatsapp_number, `Hello ${s.store_name}, I want to place an order.`);
 
   return (
-    <footer className="mt-auto bg-ink pb-20 text-white/75 md:pb-28">
+    <footer className="mt-auto -mb-[calc(64px+env(safe-area-inset-bottom))] bg-ink pb-[calc(150px+env(safe-area-inset-bottom))] text-white/75 md:mb-0 md:pb-28">
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-9 md:grid-cols-[1.3fr_1fr_1fr]">
         <div>
           <span className="inline-block rounded-2xl bg-white px-4 py-3">
