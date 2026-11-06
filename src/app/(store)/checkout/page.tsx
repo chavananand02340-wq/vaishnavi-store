@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { formatPaise } from "@/lib/money";
 import { placeOrder, requestOrderEmail, type Quote } from "@/lib/checkout";
 import { useCart } from "@/components/store/cart";
