@@ -237,7 +237,7 @@ export default function CheckoutPage() {
   return (
     <>
       <PageBar title="Checkout" back="/cart" />
-      <form onSubmit={submit} noValidate className="mx-auto max-w-3xl space-y-3 px-3 pb-40 pt-3">
+      <form onSubmit={submit} noValidate className="mx-auto w-full min-w-0 max-w-3xl space-y-3 px-3 pb-40 pt-3">
         <section className="space-y-4 rounded-[var(--radius-card)] bg-white p-4 ring-1 ring-line">
           <h2 className="flex items-center gap-2 text-[17px] font-bold">
             <Icon name="pin" className="size-5 text-brand-700" /> Where should we deliver?
@@ -267,9 +267,9 @@ export default function CheckoutPage() {
             </Field>
           </div>
           {areas.length > 0 && (
-            <div>
+            <div className="min-w-0 overflow-hidden">
               <p className="mb-1.5 text-[13px] font-semibold text-muted">Your area? Tap to add</p>
-              <div className="no-scrollbar -mx-4 flex gap-1.5 overflow-x-auto px-4">
+              <div className="no-scrollbar flex gap-1.5 overflow-x-auto">
                 {areas.map((a) => {
                   const has = d.address.toLowerCase().includes(a.toLowerCase());
                   return (
