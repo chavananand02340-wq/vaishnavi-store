@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getSettings } from "@/lib/store-data";
+import { getSettings } from "@/services/catalog";
 import { ContactBlock, LegalPage, who } from "@/components/store/legal/LegalPage";
 
 export const metadata: Metadata = { title: "Privacy policy", alternates: { canonical: "/privacy" } };
@@ -26,7 +26,7 @@ export default async function PrivacyPage() {
       </ul>
       <p>We do not sell or rent your details to anyone and we do not send marketing messages without asking you first.</p>
       <h2>Who else handles it</h2>
-      <p>Your data is stored with Supabase (database servers in Mumbai, India). The website is hosted by Netlify and order emails are sent through Resend. These services process data only to run this website for us.</p>
+      <p>Your data is stored with Supabase (database servers in Mumbai, India). The website is hosted by Cloudflare, online payments are handled by Razorpay, and order emails are sent through Resend. These services process data only to run this website for us.</p>
       <h2>How long we keep it</h2>
       <p>We keep order records for up to 8 years for tax and accounting purposes, and then delete them.</p>
       <h2>Your rights</h2>

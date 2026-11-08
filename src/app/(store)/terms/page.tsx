@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getSettings } from "@/lib/store-data";
+import { getSettings } from "@/services/catalog";
 import { ContactBlock, LegalPage, who } from "@/components/store/legal/LegalPage";
 
 export const metadata: Metadata = { title: "Terms & conditions", alternates: { canonical: "/terms" } };

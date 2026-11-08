@@ -1,5 +1,7 @@
 "use client";
 
+
+
 /** Shrinks a phone photo before upload (WebP, or JPEG where WebP isn't supported). */
 export async function shrinkImage(file: File, maxSide: number): Promise<{ blob: Blob; ext: "webp" | "jpg" }> {
   const bitmap = await createImageBitmap(file);

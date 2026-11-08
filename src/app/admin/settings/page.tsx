@@ -1,46 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase/browser";
-import { formatPaise, paiseToRupeesInput, rupeesToPaise } from "@/lib/money";
-import { useAsync, must } from "@/lib/useAsync";
-import { refreshStorefront } from "@/components/admin/team";
-import { Card, ErrorBox, Field, PageTitle, Spinner, Switch } from "@/components/admin/ui";
-import { Icon } from "@/components/Icon";
-import { useToast } from "@/components/Toast";
+import { getStoreSettings, updateStoreSettings } from "@/services/admin/settings";
+import { settingsFromForm, settingsToForm, type SettingsForm as F } from "@/lib/settings-form";
+import { formatPaise, rupeesToPaise } from "@/lib/money";
+import { useAsync } from "@/hooks/useAsync";
+import { useAction } from "@/hooks/useAction";
+import { Card, ErrorBox, Field, PageTitle, Spinner, Switch } from "@/components/admin/AdminUI";
+import { Icon } from "@/components/ui/Icon";
 import { SystemCheck } from "@/components/admin/SystemCheck";
-
-type S = {
-  store_name: string; tagline: string | null; address: string | null; phone_primary: string | null; phone_secondary: string | null;
-  whatsapp_number: string | null; email: string | null; instagram_url: string | null; maps_url: string | null;
-  open_time: string; close_time: string; accepting_orders: boolean; closed_message: string | null; announcement: string | null;
-  delivery_fee_paise: number; free_delivery_enabled: boolean; free_delivery_threshold_paise: number; min_order_paise: number | null;
-  default_eta_minutes: number; cod_enabled: boolean; upi_enabled: boolean; upi_id: string | null; upi_payee_name: string | null; low_stock_threshold: number; razorpay_enabled?: boolean;
-  legal_name: string | null; gstin: string | null; fssai_number: string | null; support_email: string | null; notify_email: string | null;
-};
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-
-type F = Record<
-  "store_name" | "tagline" | "address" | "phone_primary" | "phone_secondary" | "whatsapp_number" | "email" | "instagram_url" | "maps_url" |
-  "open_time" | "close_time" | "closed_message" | "announcement" | "delivery_fee" | "threshold" | "min_order" | "eta" | "upi_id" | "upi_payee_name" | "low_stock" |
-  "legal_name" | "gstin" | "fssai_number" | "support_email" | "notify_email",
-  string
-> & { accepting_orders: boolean; free_delivery_enabled: boolean; cod_enabled: boolean; upi_enabled: boolean; razorpay_enabled: boolean };
-
-const toForm = (s: S): F => ({
-  store_name: s.store_name, tagline: s.tagline ?? "", address: s.address ?? "", phone_primary: s.phone_primary ?? "", phone_secondary: s.phone_secondary ?? "",
-  whatsapp_number: s.whatsapp_number ?? "", email: s.email ?? "", instagram_url: s.instagram_url ?? "", maps_url: s.maps_url ?? "",
-  open_time: s.open_time.slice(0, 5), close_time: s.close_time.slice(0, 5), closed_message: s.closed_message ?? "", announcement: s.announcement ?? "",
-  delivery_fee: paiseToRupeesInput(s.delivery_fee_paise), threshold: paiseToRupeesInput(s.free_delivery_threshold_paise), min_order: paiseToRupeesInput(s.min_order_paise),
-  eta: String(s.default_eta_minutes), upi_id: s.upi_id ?? "", upi_payee_name: s.upi_payee_name ?? "", low_stock: String(s.low_stock_threshold),
-  accepting_orders: s.accepting_orders, free_delivery_enabled: s.free_delivery_enabled, cod_enabled: s.cod_enabled, upi_enabled: s.upi_enabled, razorpay_enabled: s.razorpay_enabled ?? false,
-  legal_name: s.legal_name ?? "", gstin: s.gstin ?? "", fssai_number: s.fssai_number ?? "", support_email: s.support_email ?? "", notify_email: s.notify_email ?? "",
-});
-
-const mobile = (v: string) => {
-  const d = v.replace(/\D/g, "").replace(/^(91|0)(?=\d{10}$)/, "");
-  return d === "" ? null : /^[6-9]\d{9}$/.test(d) ? d : undefined;
-};
 
 function Section({ icon, color, title, children }: { icon: string; color: string; title: string; children: React.ReactNode }) {
   return (
@@ -57,12 +25,11 @@ function Section({ icon, color, title, children }: { icon: string; color: string
 }
 
 export default function SettingsPage() {
-  const toast = useToast();
   const [f, setF] = useState<F | null>(null);
-  const [saving, setSaving] = useState(false);
-  const { data, error, loading, reload } = useAsync(async () => must(await supabase().from("store_settings").select("*").eq("id", 1).single()) as S);
+  const { run, isBusy: saving } = useAction();
+  const { data, error, loading, reload } = useAsync(getStoreSettings);
   useEffect(() => {
-    if (data) setF(toForm(data));
+    if (data) setF(settingsToForm(data));
   }, [data]);
 
   if (loading && !f) return <Spinner />;
@@ -70,51 +37,15 @@ export default function SettingsPage() {
   if (!f || !data) return <Spinner />;
 
   const set = (k: keyof F) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
-  const dirty = JSON.stringify(f) !== JSON.stringify(toForm(data));
+  const dirty = JSON.stringify(f) !== JSON.stringify(settingsToForm(data));
 
   async function save() {
     if (!f || !data) return;
-    const fee = rupeesToPaise(f.delivery_fee);
-    const threshold = rupeesToPaise(f.threshold);
-    const minOrder = f.min_order.trim() ? rupeesToPaise(f.min_order) : null;
-    const eta = Number(f.eta);
-    const low = Number(f.low_stock);
-    const p1 = mobile(f.phone_primary), p2 = mobile(f.phone_secondary), wa = mobile(f.whatsapp_number);
-    if (f.store_name.trim().length < 2) return toast("Write the shop name", "error");
-    if (fee == null) return toast("Delivery fee isn't a valid amount", "error");
-    if (threshold == null) return toast("Free-delivery amount isn't valid", "error");
-    if (f.min_order.trim() && minOrder == null) return toast("Minimum order isn't valid", "error");
-    if (!Number.isInteger(eta) || eta < 5 || eta > 600) return toast("Delivery time must be 5 to 600 minutes", "error");
-    if (!Number.isInteger(low) || low < 0) return toast("Low-stock number must be 0 or more", "error");
-    if (p1 === undefined || p2 === undefined || wa === undefined) return toast("Phone numbers must be 10 digits", "error");
-    if (f.upi_id.trim() && !/^[a-zA-Z0-9.\-_]{2,200}@[a-zA-Z]{2,64}$/.test(f.upi_id.trim())) return toast("UPI ID looks wrong, e.g. shopname@okaxis", "error");
-    if (f.upi_enabled && (!f.upi_id.trim() || !f.upi_payee_name.trim())) return toast("To turn on UPI, add the UPI ID and name", "error");
-    if (f.support_email.trim() && !EMAIL_RE.test(f.support_email.trim())) return toast("Support email looks wrong", "error");
-    if (f.notify_email.trim() && !EMAIL_RE.test(f.notify_email.trim())) return toast("Order alert email looks wrong", "error");
-    if (!/^\d{2}:\d{2}$/.test(f.open_time) || !/^\d{2}:\d{2}$/.test(f.close_time)) return toast("Set opening and closing time", "error");
-
-    setSaving(true);
-    const { error: e } = await supabase()
-      .from("store_settings")
-      .update({
-        store_name: f.store_name.trim(), tagline: f.tagline.trim() || null, address: f.address.trim() || null,
-        phone_primary: p1, phone_secondary: p2, whatsapp_number: wa, email: f.email.trim() || null,
-        instagram_url: f.instagram_url.trim() || null, maps_url: f.maps_url.trim() || null,
-        open_time: f.open_time, close_time: f.close_time, accepting_orders: f.accepting_orders,
-        closed_message: f.closed_message.trim() || null, announcement: f.announcement.trim() || null,
-        delivery_fee_paise: fee, free_delivery_enabled: f.free_delivery_enabled, free_delivery_threshold_paise: threshold, min_order_paise: minOrder,
-        default_eta_minutes: eta, cod_enabled: f.cod_enabled, upi_enabled: f.upi_enabled, upi_id: f.upi_id.trim() || null, upi_payee_name: f.upi_payee_name.trim() || null,
-        low_stock_threshold: low,
-        ...("razorpay_enabled" in data ? { razorpay_enabled: f.razorpay_enabled } : {}),
-        legal_name: f.legal_name.trim() || null, gstin: f.gstin.trim().toUpperCase() || null, fssai_number: f.fssai_number.trim() || null,
-        support_email: f.support_email.trim() || null, notify_email: f.notify_email.trim() || null,
-      })
-      .eq("id", 1);
-    setSaving(false);
-    if (e) return toast(`Couldn't save: ${e.message}`, "error");
-    toast("Settings saved");
-    void refreshStorefront();
-    reload();
+    await run("save", async () => updateStoreSettings(settingsFromForm(f, "razorpay_enabled" in data)), {
+      success: "Settings saved",
+      refreshStore: true,
+      onSuccess: reload,
+    });
   }
 
   const feePreview = rupeesToPaise(f.delivery_fee);

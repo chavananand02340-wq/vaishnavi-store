@@ -1,14 +1,13 @@
 import Link from "next/link";
-import { getBanners, getCatalog, getCategories, getSettings } from "@/lib/store-data";
-import { bestDiscount, waLink } from "@/lib/cards";
-import { imageUrl } from "@/lib/catalog";
+import { getBanners, getCatalog, getCategories, getSettings } from "@/services/catalog";
+import { bestDiscount, waLink, imageUrl } from "@/lib/catalog";
 import { StoreHeader } from "@/components/store/StoreHeader";
 import { ProductRow } from "@/components/store/ProductCard";
 import { PincodeCheck } from "@/components/store/PincodeCheck";
 import { HeroSlider } from "@/components/store/HeroSlider";
 import { SaleHero } from "@/components/store/SaleHero";
-import { Icon } from "@/components/Icon";
-import { WaIcon } from "@/components/WaIcon";
+import { Icon } from "@/components/ui/Icon";
+import { WhatsAppIcon } from "@/components/ui/WhatsAppIcon";
 import { CategoryGrid, TINTS } from "@/components/store/CategoryGrid";
 import { ForYou } from "@/components/store/ForYou";
 
@@ -101,7 +100,7 @@ export default async function Home() {
         {wa && (
           <a href={wa} rel="noopener" className="flex items-center gap-4 overflow-hidden rounded-[20px] bg-[#25d366] p-4 text-[#073b20]">
             <span className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-white shadow-sm">
-              <WaIcon tone="green" className="size-9" />
+              <WhatsAppIcon tone="green" className="size-9" />
             </span>
             <span className="min-w-0 flex-1">
               <b className="block font-display text-[19px] leading-tight">Busy? Send your list on WhatsApp</b>

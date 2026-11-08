@@ -1,5 +1,7 @@
 "use client";
 
+
+
 export default function Error({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
   return (
     <main className="mx-auto flex min-h-dvh max-w-sm flex-col items-center justify-center gap-3 px-5 text-center">

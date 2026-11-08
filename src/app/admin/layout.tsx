@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { TeamProvider } from "@/components/admin/team";
+import { TeamProvider } from "@/state/team";
 import { Shell } from "@/components/admin/Shell";
-import { ToastProvider } from "@/components/Toast";
+import { ToastProvider } from "@/components/ui/Toast";
 
 export const metadata: Metadata = { title: "Owner panel", robots: { index: false, follow: false } };
 

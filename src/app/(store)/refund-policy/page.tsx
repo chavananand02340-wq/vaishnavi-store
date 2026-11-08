@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getSettings } from "@/lib/store-data";
+import { getSettings } from "@/services/catalog";
 import { LegalPage, who } from "@/components/store/legal/LegalPage";
 
 export const metadata: Metadata = { title: "Returns, refunds & cancellation", alternates: { canonical: "/refund-policy" } };

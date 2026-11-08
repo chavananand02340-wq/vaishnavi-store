@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { getSettings } from "@/lib/store-data";
-import { formatTime } from "@/lib/hours";
-import { waLink } from "@/lib/cards";
+import { getSettings } from "@/services/catalog";
+import { formatTime } from "@/lib/time";
+import { waLink } from "@/lib/catalog";
 import { ContactBlock, LegalPage, who } from "@/components/store/legal/LegalPage";
 
 export const metadata: Metadata = { title: "Contact us", alternates: { canonical: "/contact" } };

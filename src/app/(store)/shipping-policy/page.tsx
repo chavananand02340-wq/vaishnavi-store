@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { getSettings } from "@/lib/store-data";
-import { formatTime } from "@/lib/hours";
+import { getSettings } from "@/services/catalog";
+import { formatTime } from "@/lib/time";
 import { formatPaise } from "@/lib/money";
 import { LegalPage, who } from "@/components/store/legal/LegalPage";
 

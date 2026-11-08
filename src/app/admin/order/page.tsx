@@ -3,32 +3,20 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
-import { supabase } from "@/lib/supabase/browser";
-import { istTime } from "@/lib/hours";
-import { useAsync, must } from "@/lib/useAsync";
-import { ORDER_SELECT, OrderCard, type OrderRow } from "@/components/admin/OrderCard";
-import { Card, CardTitle, Empty, ErrorBox, Spinner, STATUS } from "@/components/admin/ui";
-import { Icon } from "@/components/Icon";
-
-type History = { id: number; from_status: string | null; to_status: string; note: string | null; created_at: string };
+import { getOrderDetail } from "@/services/admin/orders";
+import { isUuid } from "@/lib/validation";
+import { istTime } from "@/lib/time";
+import { useAsync } from "@/hooks/useAsync";
+import { OrderCard } from "@/components/admin/OrderCard";
+import { Card, CardTitle, Empty, ErrorBox, Spinner, STATUS } from "@/components/admin/AdminUI";
+import { Icon } from "@/components/ui/Icon";
 
 function Detail() {
   const id = useSearchParams().get("id") ?? "";
-  const valid = /^[0-9a-f-]{36}$/i.test(id);
+  const valid = isUuid(id);
   const { data, error, loading, reload } = useAsync(async () => {
     if (!valid) return null;
-    const sb = supabase();
-    const [o, h, s] = await Promise.all([
-      sb.from("orders").select(ORDER_SELECT).eq("id", id).maybeSingle(),
-      sb.from("order_status_history").select("id, from_status, to_status, note, created_at").eq("order_id", id).order("created_at"),
-      sb.from("store_settings").select("store_name, default_eta_minutes").eq("id", 1).single(),
-    ]);
-    return {
-      order: must(o) as unknown as OrderRow | null,
-      history: (must(h) ?? []) as History[],
-      storeName: (s.data?.store_name as string) ?? "Vaishnavi Store",
-      eta: (s.data?.default_eta_minutes as number) ?? 30,
-    };
+    return getOrderDetail(id);
   }, [id]);
 
   if (loading && !data) return <Spinner />;

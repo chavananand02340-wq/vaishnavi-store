@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { supabase } from "@/lib/supabase/browser";
-import { Icon } from "@/components/Icon";
-import { alarm } from "./alarm";
+import { subscribeToOrders, type LiveStatus } from "@/services/admin/orders";
+import { Icon } from "@/components/ui/Icon";
+import { alarm } from "@/state/alarm";
 
 /**
  * New-order alarm for the counter phone.
@@ -12,10 +12,10 @@ import { alarm } from "./alarm";
  *  - The alarm repeats every 20 s while any order is still New.
  *  - Keeps the screen awake where the phone allows it.
  */
-export function OrderAlerts({ newIds, onChange }: { newIds: string[]; latestNewNo?: number | null; onChange: () => void }) {
+export function OrderAlerts({ newIds, onChange }: { newIds: string[]; onChange: () => void }) {
   // The beeping itself is done by the panel shell (alarm.ts) so it works on every admin page.
   const [shift, setShift] = useState(alarm.isOn());
-  const [live, setLive] = useState<"connecting" | "live" | "offline">("connecting");
+  const [live, setLive] = useState<LiveStatus>("connecting");
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
   const newCount = newIds.length;
@@ -23,18 +23,14 @@ export function OrderAlerts({ newIds, onChange }: { newIds: string[]; latestNewN
   useEffect(() => alarm.subscribe(() => setShift(alarm.isOn())), []);
 
   useEffect(() => {
-    const sb = supabase();
-    const ch = sb
-      .channel("orders-live")
-      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => onChangeRef.current())
-      .subscribe((status) => setLive(status === "SUBSCRIBED" ? "live" : status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED" ? "offline" : "connecting"));
+    const unsubscribe = subscribeToOrders("orders-live", () => onChangeRef.current(), setLive);
     const t = setInterval(() => document.visibilityState === "visible" && onChangeRef.current(), 20_000);
     const onVis = () => document.visibilityState === "visible" && onChangeRef.current();
     document.addEventListener("visibilitychange", onVis);
     return () => {
       clearInterval(t);
       document.removeEventListener("visibilitychange", onVis);
-      void sb.removeChannel(ch);
+      unsubscribe();
     };
   }, []);
 

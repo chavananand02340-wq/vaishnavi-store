@@ -40,14 +40,17 @@ Order **01 → 15** hi rakhna. Koi part fail ho jaye toh error ka text bhejo. Ha
 
 ❌ `service_role` / `secret` key kahin nahi daalni.
 
-## Step 5 — Netlify (10 min)
+## Step 5 — Cloudflare hosting (already done for vaishnavistores.shop)
 
-1. Store ki Gmail se https://netlify.com → **Sign up** → **Add new project → Import an existing project → GitHub** → `vaishnavi-store` repo choose karo.
-2. Build settings automatic aayenge (`npm run build`). **Environment variables** mein add karo:
+Website Cloudflare Workers par chalti hai. Har `main` push par GitHub Actions khud deploy karta hai.
+
+1. GitHub repo → **Settings → Secrets and variables → Actions** mein yeh secrets hone chahiye:
+   - `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`
    - `NEXT_PUBLIC_SUPABASE_URL` = Step 4 ka URL
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY` = Step 4 ki anon key
-3. **Deploy**. 2–4 minute mein site `https://<naam>.netlify.app` par live.
-4. Site ka final address pata chalne ke baad ek aur variable add karo: `NEXT_PUBLIC_SITE_URL` = `https://<naam>.netlify.app` (domain lene ke baad use domain se badal dena) → **Deploys → Trigger deploy**.
+   - (optional) `NOTIFY_SECRET`, `RESEND_API_KEY`, `EMAIL_FROM`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`
+2. Deploy workflow yeh secrets apne aap Cloudflare mein copy kar deta hai. Kuch badla toh **Actions → Deploy to Cloudflare → Run workflow**.
+3. Cloudflare → SSL/TLS → Edge Certificates → **Always Use HTTPS** ON (live location ke liye HTTPS zaroori hai).
 
 ## Step 6 — Pehli baar store set karna (owner, phone se)
 
@@ -84,11 +87,11 @@ Phir **Actions → Nightly database backup → Run workflow** se ek baar test ka
 
 1. Supabase SQL Editor me parts 17, 18, 19, 20, 21 ek-ek karke chalao. Part 21 ke last me ek `notify_secret` dikhega — copy karo.
 2. https://resend.com par shop ki Gmail se sign up karo → **API Keys → Create API key** (permission: Sending access) → key copy karo.
-3. Netlify → Site configuration → Environment variables me add karo:
+3. GitHub → Settings → Secrets and variables → Actions me add karo:
    - `RESEND_API_KEY` = Resend wali key
    - `NOTIFY_SECRET` = step 1 wala secret
    - `EMAIL_FROM` = abhi khaali chhodo (domain lene ke baad: `Vaishnavi E-Mart <orders@aapkadomain.in>`)
-4. Netlify → Deploys → **Trigger deploy**.
+4. GitHub → Actions → **Deploy to Cloudflare → Run workflow**.
 5. Owner panel → Shop settings → **Order emails** me apni email daalo.
 
 Domain verify hone tak Resend sirf aapke Resend account wali email par bhejta hai (owner alert kaam karega). Customer receipts ke liye Resend → Domains me apna domain verify karo, phir `EMAIL_FROM` set karo.
@@ -98,7 +101,7 @@ Domain verify hone tak Resend sirf aapke Resend account wali email par bhejta ha
 | Problem | Kya karein |
 |---|---|
 | Login par "does not have access" | Step 3 ka `setup_team.sql` dobara chalao, email spelling check karo |
-| Site par "Store is being set up" | Netlify env variables check karo, phir redeploy |
+| Site par "Store is being set up" | GitHub secrets (Supabase URL/key) check karo, phir deploy workflow dobara chalao |
 | Order button disabled | Store closed (timing/switch) ya PIN code list mein nahi |
 | Counter par awaaz nahi | "Start shift" dabaya? Phone silent/DND? App background mein to nahi? |
 | Photo upload fail | Internet check karo; 6 photos se zyada nahi ho sakti |

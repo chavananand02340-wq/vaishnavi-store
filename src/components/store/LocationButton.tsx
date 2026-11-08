@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { currentSpot, placeOf, type Place, type Spot } from "@/lib/geo";
-import { Icon } from "@/components/Icon";
+import { currentSpot, type Spot } from "@/lib/geolocation";
+import { Icon } from "@/components/ui/Icon";
+import { placeOf, type Place } from "@/services/location";
 
 /**
  * "Use my current location": the delivery person gets the exact spot on the map,

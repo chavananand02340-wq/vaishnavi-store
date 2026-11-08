@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { useState } from "react";
 import { formatPaise } from "@/lib/money";
-import type { CardProduct } from "@/lib/cards";
-import { Icon } from "@/components/Icon";
-import { MAX_QTY, useCart } from "./cart";
-import { useFavourites } from "@/lib/local";
+import { Icon } from "@/components/ui/Icon";
+import { useCart } from "@/state/cart";
+import { MAX_QTY } from "@/config/site";
+import { useFavourites } from "@/state/device-store";
+import { type CardProduct } from "@/types/catalog";
 
 export function Stepper({ qty, max, onChange, label, big = false }: { qty: number; max: number; onChange: (q: number) => void; label: string; big?: boolean }) {
   const cap = Math.min(MAX_QTY, max);

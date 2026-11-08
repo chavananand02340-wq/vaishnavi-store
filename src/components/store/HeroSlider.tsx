@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import type { Banner } from "@/lib/store-data";
 import { formatPaise } from "@/lib/money";
-import { waLink } from "@/lib/cards";
-import { Icon } from "@/components/Icon";
-import { useCart } from "./cart";
+import { waLink } from "@/lib/catalog";
+import { Icon } from "@/components/ui/Icon";
+import { useCart } from "@/state/cart";
+import { type Banner } from "@/types/catalog";
 
 type Slide =
   | { kind: "image"; id: string; image: string; link: string | null; alt: string }

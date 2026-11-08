@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Icon } from "@/components/Icon";
-import { useCart } from "./cart";
+import { Icon } from "@/components/ui/Icon";
+import { useCart } from "@/state/cart";
 
 const ITEMS = [
   { href: "/", label: "Home", icon: "home", match: (p: string) => p === "/" },

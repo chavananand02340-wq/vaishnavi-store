@@ -1,57 +1,32 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { supabase } from "@/lib/supabase/browser";
+import { getDashboard, setAcceptingOrders } from "@/services/admin/settings";
 import { formatPaise } from "@/lib/money";
-import { formatTime, isOpenNow, istDayStartISO, istTime } from "@/lib/hours";
-import { useAsync, must } from "@/lib/useAsync";
-import { refreshStorefront, useTeam } from "@/components/admin/team";
-import { ErrorBox, Spinner, StatusPill, Tile } from "@/components/admin/ui";
-import { Icon } from "@/components/Icon";
-import { useToast } from "@/components/Toast";
-
-type Recent = { id: string; order_no: number; customer_name: string; total_paise: number; status: string; created_at: string };
+import { orderLabel } from "@/config/site";
+import { formatTime, isOpenNow, istHour, istTime } from "@/lib/time";
+import { useAsync } from "@/hooks/useAsync";
+import { useAction } from "@/hooks/useAction";
+import { useTeam } from "@/state/team";
+import { ErrorBox, Spinner, StatusPill, Tile } from "@/components/admin/AdminUI";
+import { Icon } from "@/components/ui/Icon";
 
 export default function Dashboard() {
   const { name } = useTeam();
-  const toast = useToast();
-  const [switching, setSwitching] = useState(false);
+  const { run, busy } = useAction();
+  const switching = busy === "orders";
 
-  const { data, error, loading, reload, setData } = useAsync(async () => {
-    const sb = supabase();
-    const [s, today, active, recent, low] = await Promise.all([
-      sb.from("store_settings").select("accepting_orders, open_time, close_time, low_stock_threshold, delivery_fee_paise, free_delivery_threshold_paise, free_delivery_enabled, default_eta_minutes").eq("id", 1).single(),
-      sb.from("orders").select("total_paise, status").gte("created_at", istDayStartISO()),
-      sb.from("orders").select("id", { count: "exact", head: true }).in("status", ["new", "confirmed", "out_for_delivery"]),
-      sb.from("orders").select("id, order_no, customer_name, total_paise, status, created_at").order("created_at", { ascending: false }).limit(6),
-      sb.from("product_variants").select("id, stock_qty").eq("is_active", true),
-    ]);
-    const settings = must(s) as {
-      accepting_orders: boolean; open_time: string; close_time: string; low_stock_threshold: number;
-      delivery_fee_paise: number; free_delivery_threshold_paise: number; free_delivery_enabled: boolean; default_eta_minutes: number;
-    };
-    const t = (must(today) ?? []) as { total_paise: number; status: string }[];
-    return {
-      settings,
-      todayCount: t.length,
-      todaySales: t.filter((o) => o.status !== "cancelled").reduce((n, o) => n + o.total_paise, 0),
-      active: active.count ?? 0,
-      recent: (must(recent) ?? []) as Recent[],
-      lowStock: ((low.data ?? []) as { stock_qty: number }[]).filter((v) => v.stock_qty <= settings.low_stock_threshold).length,
-    };
-  });
+  const { data, error, loading, reload, setData } = useAsync(getDashboard);
 
   async function toggleOrders() {
     if (!data) return;
     const next = !data.settings.accepting_orders;
-    setSwitching(true);
-    const { error: e } = await supabase().from("store_settings").update({ accepting_orders: next }).eq("id", 1);
-    setSwitching(false);
-    if (e) return toast("Couldn't change. Try again.", "error");
-    setData({ ...data, settings: { ...data.settings, accepting_orders: next } });
-    toast(next ? "Online orders are on" : "Online orders are paused");
-    void refreshStorefront();
+    const done = await run("orders", () => setAcceptingOrders(next), {
+      success: next ? "Online orders are on" : "Online orders are paused",
+      failure: "Couldn't change. Try again.",
+      refreshStore: true,
+    });
+    if (done) setData({ ...data, settings: { ...data.settings, accepting_orders: next } });
   }
 
   if (loading && !data) return <Spinner />;
@@ -59,7 +34,7 @@ export default function Dashboard() {
 
   const s = data.settings;
   const openNow = isOpenNow(s);
-  const hour = Number(new Date().toLocaleString("en-IN", { hour: "numeric", hour12: false, timeZone: "Asia/Kolkata" }));
+  const hour = istHour();
   const greet = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
   return (
@@ -122,7 +97,7 @@ export default function Dashboard() {
               <li key={o.id}>
                 <Link href={`/admin/order?id=${o.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-page">
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[15px] font-bold">VS-{o.order_no}, {o.customer_name}</span>
+                    <span className="block text-[15px] font-bold">{orderLabel(o.order_no)}, {o.customer_name}</span>
                     <span className="text-[13px] text-muted">{istTime(o.created_at)}</span>
                   </span>
                   <span className="text-right">

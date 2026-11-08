@@ -1,43 +1,38 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase/browser";
-import { Icon } from "@/components/Icon";
+import { isPincodeServed } from "@/services/location";
+import { getSavedPin, savePin } from "@/state/device-store";
+import { isPincode } from "@/lib/validation";
+import { errorMessage } from "@/lib/errors";
+import { Icon } from "@/components/ui/Icon";
 
-export const PIN_KEY = "vs-pin";
-
+/** "Do we deliver to you?" PIN check. Remembers a served PIN on this phone. */
 export function PincodeCheck({ onDone }: { onDone?: () => void } = {}) {
   const [pin, setPin] = useState("");
   const [saved, setSaved] = useState<string | null>(null);
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    try {
-      const p = window.localStorage.getItem(PIN_KEY);
-      if (p && /^\d{6}$/.test(p)) setSaved(p);
-    } catch {
-      /* ignore */
-    }
-  }, []);
+  useEffect(() => setSaved(getSavedPin()), []);
 
   async function check(e: React.FormEvent) {
     e.preventDefault();
-    if (!/^[1-9]\d{5}$/.test(pin)) {
+    if (!isPincode(pin)) {
       setResult({ ok: false, text: "Enter a 6-digit PIN code." });
       return;
     }
     setBusy(true);
-    const { data, error } = await supabase().from("delivery_pincodes").select("pincode").eq("pincode", pin).eq("is_active", true).maybeSingle();
+    let served: boolean;
+    try {
+      served = await isPincodeServed(pin);
+    } catch (err) {
+      setBusy(false);
+      return setResult({ ok: false, text: errorMessage(err) });
+    }
     setBusy(false);
-    if (error) return setResult({ ok: false, text: "Couldn't check right now. Try again." });
-    if (data) {
-      try {
-        window.localStorage.setItem(PIN_KEY, pin);
-      } catch {
-        /* ignore */
-      }
-      window.dispatchEvent(new CustomEvent("vs-local", { detail: PIN_KEY }));
+    if (served) {
+      savePin(pin);
       setSaved(pin);
       setResult(null);
       onDone?.();

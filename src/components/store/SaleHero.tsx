@@ -1,11 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import type { PublicSettings } from "@/lib/store-data";
-import { Icon } from "@/components/Icon";
+import { Icon } from "@/components/ui/Icon";
 import { imageUrl } from "@/lib/catalog";
-
-export const COUPON_KEY = "vs-coupon";
+import type { PublicSettings } from "@/types/settings";
+import { saveCoupon } from "@/state/device-store";
 
 const THEMES = {
   festive: { bg: "bg-[#5a0b2e]", text: "text-white", sub: "text-[#ffd9a0]", accent: "text-haldi-400", chip: "bg-haldi-400 text-[#3d0720]", ring: "border-haldi-400/40" },
@@ -32,8 +31,8 @@ export function SaleHero({ s, productImages }: { s: PublicSettings | null; produ
 
   async function useCode() {
     if (!code) return;
+    saveCoupon(code);
     try {
-      window.localStorage.setItem(COUPON_KEY, code);
       await navigator.clipboard?.writeText(code);
     } catch {
       /* ignore */

@@ -1,26 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { supabase } from "@/lib/supabase/browser";
-import { IMAGE_BUCKET, imageUrl } from "@/lib/catalog";
-import { shrinkImage } from "@/lib/image";
-import { useAsync } from "@/lib/useAsync";
-import { refreshStorefront } from "@/components/admin/team";
-import { Card, CardTitle, ErrorBox, Spinner, Switch } from "@/components/admin/ui";
-import { Icon } from "@/components/Icon";
-import { useToast } from "@/components/Toast";
+import { getOfferBanner, saveOfferBanner, uploadOfferPicture, type OfferFields as Offer } from "@/services/admin/marketing";
+import { imageUrl } from "@/lib/catalog";
+import { useAsync } from "@/hooks/useAsync";
+import { useAction } from "@/hooks/useAction";
+import { Card, CardTitle, ErrorBox, Spinner, Switch } from "@/components/admin/AdminUI";
+import { Icon } from "@/components/ui/Icon";
+import type { SaleTheme as Theme } from "@/types/settings";
 
-type Theme = "festive" | "red" | "green" | "night";
-type Offer = {
-  sale_enabled: boolean;
-  sale_title: string | null;
-  sale_subtitle: string | null;
-  sale_percent: number | null;
-  sale_coupon_code: string | null;
-  sale_theme: Theme;
-  sale_image_path?: string | null;
-  sale_link_url?: string | null;
-};
 type F = { enabled: boolean; title: string; subtitle: string; pct: string; code: string; theme: Theme; image: string | null; link: string };
 
 const THEMES: { key: Theme; label: string; cls: string }[] = [
@@ -44,20 +32,10 @@ const toForm = (o: Offer): F => ({
 
 /** The one big banner at the top of the home page: picture (or text) + "20% OFF" badge. */
 export function OfferBannerEditor() {
-  const toast = useToast();
   const input = useRef<HTMLInputElement>(null);
   const [f, setF] = useState<F | null>(null);
-  const [busy, setBusy] = useState(false);
-  const { data, error, loading, reload } = useAsync(async () => {
-    const sb = supabase();
-    const [s, c] = await Promise.all([
-      sb.from("store_settings").select("*").eq("id", 1).single(),
-      sb.from("coupons").select("code, kind, value, is_active").order("created_at", { ascending: false }),
-    ]);
-    if (s.error) throw new Error(s.error.message);
-    const row = s.data as Offer & Record<string, unknown>;
-    return { offer: row, hasPicture: "sale_image_path" in row, coupons: (c.data ?? []) as { code: string; kind: string; value: number; is_active: boolean }[] };
-  });
+  const { run, isBusy: busy } = useAction();
+  const { data, error, loading, reload } = useAsync(getOfferBanner);
   useEffect(() => {
     if (data) setF(toForm(data.offer));
   }, [data]);
@@ -70,32 +48,21 @@ export function OfferBannerEditor() {
   async function upload(files: FileList | null) {
     const file = files?.[0];
     if (!file || !f) return;
-    setBusy(true);
-    try {
-      const { blob, ext } = await shrinkImage(file, 1600);
-      const path = `banners/offer-${crypto.randomUUID()}.${ext}`;
-      const up = await supabase().storage.from(IMAGE_BUCKET).upload(path, blob, { contentType: blob.type, cacheControl: "31536000" });
-      if (up.error) throw new Error(up.error.message);
-      setF({ ...f, image: path, enabled: true });
-      toast("Picture ready. Tap Save banner.");
-    } catch (e) {
-      toast(e instanceof Error ? `Upload failed: ${e.message}` : "Upload failed", "error");
-    } finally {
-      setBusy(false);
-      if (input.current) input.current.value = "";
-    }
+    await run("upload", () => uploadOfferPicture(file), {
+      success: "Picture ready. Tap Save banner.",
+      failure: "Upload failed",
+      onSuccess: (path) => setF({ ...f, image: path, enabled: true }),
+    });
+    if (input.current) input.current.value = "";
   }
 
   async function save() {
     if (!f || !data) return;
-    const pct = f.pct.trim() ? Number(f.pct) : null;
-    if (pct != null && (!Number.isInteger(pct) || pct < 1 || pct > 90)) return toast("Percent must be a whole number from 1 to 90", "error");
-    if (f.enabled && !f.title.trim()) return toast("Write the offer name, e.g. Diwali Sale", "error");
-    const patch: Record<string, unknown> = {
+    const patch: Partial<Offer> = {
       sale_enabled: f.enabled,
       sale_title: f.title.trim() || null,
       sale_subtitle: f.subtitle.trim() || null,
-      sale_percent: pct,
+      sale_percent: f.pct.trim() ? Number(f.pct) : null,
       sale_coupon_code: f.code || null,
       sale_theme: f.theme,
     };
@@ -103,15 +70,11 @@ export function OfferBannerEditor() {
       patch.sale_image_path = f.image;
       patch.sale_link_url = f.link.trim() || null;
     }
-    setBusy(true);
-    const { error: e } = await supabase().from("store_settings").update(patch).eq("id", 1);
-    setBusy(false);
-    if (e) return toast(`Couldn't save: ${e.message}`, "error");
-    const old = data.offer.sale_image_path;
-    if (old && old !== f.image) void supabase().storage.from(IMAGE_BUCKET).remove([old]);
-    toast(f.enabled ? "Offer banner is live" : "Offer banner saved (hidden)");
-    void refreshStorefront();
-    reload();
+    await run("save", () => saveOfferBanner(patch, data.offer.sale_image_path), {
+      success: f.enabled ? "Offer banner is live" : "Offer banner saved (hidden)",
+      refreshStore: true,
+      onSuccess: reload,
+    });
   }
 
   const theme = THEMES.find((t) => t.key === f.theme) ?? THEMES[0];

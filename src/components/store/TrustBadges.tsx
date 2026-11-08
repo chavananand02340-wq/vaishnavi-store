@@ -1,4 +1,4 @@
-import { Icon } from "@/components/Icon";
+import { Icon } from "@/components/ui/Icon";
 
 /**
  * Plain text badges (no third-party logos): how customers can pay, and why it is safe.

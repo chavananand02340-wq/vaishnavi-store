@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
-import { supabase } from "@/lib/supabase/browser";
-import { Icon } from "@/components/Icon";
-import { alarm } from "./alarm";
-import { HUE, type Hue } from "./ui";
-import { useTeam } from "./team";
+import { useEffect, useState } from "react";
+import { useNewOrders } from "@/hooks/useNewOrders";
+import { Icon } from "@/components/ui/Icon";
+import { alarm } from "@/state/alarm";
+import { HUE, type Hue } from "@/components/admin/AdminUI";
+import { useTeam } from "@/state/team";
 
 type Item = { href: string; label: string; icon: string; hue: Hue; tab?: boolean };
 
@@ -25,71 +25,6 @@ const OWNER_NAV: Item[] = [
 
 function isActive(path: string, href: string) {
   return href === "/admin" ? path === "/admin" : path === href || path.startsWith(`${href}/`) || (href === "/admin/orders" && path === "/admin/order");
-}
-
-/**
- * Orders waiting in "New" (online orders count only once paid), kept live.
- * Also rings the shared alarm on every admin page when a new one arrives.
- */
-function useNewOrders() {
-  const [ids, setIds] = useState<{ id: string; no: number }[]>([]);
-  const [alarmOn, setAlarmOn] = useState(false);
-  const seen = useRef<Set<string> | null>(null);
-
-  useEffect(() => alarm.subscribe(() => setAlarmOn(alarm.isOn())), []);
-  useEffect(() => setAlarmOn(alarm.isOn()), []);
-
-  useEffect(() => {
-    const sb = supabase();
-    const load = async () => {
-      const { data } = await sb.from("orders").select("id, order_no, payment_method, payment_status").eq("status", "new").order("created_at");
-      const list = ((data ?? []) as { id: string; order_no: number; payment_method: string; payment_status: string }[])
-        .filter((o) => !(o.payment_method === "online" && o.payment_status !== "paid"))
-        .map((o) => ({ id: o.id, no: o.order_no }));
-      const first = seen.current === null;
-      seen.current = seen.current ?? new Set();
-      const fresh = list.filter((o) => !seen.current!.has(o.id));
-      list.forEach((o) => seen.current!.add(o.id));
-      setIds(list);
-      if (!first && fresh.length) {
-        if (alarm.isOn()) alarm.beep();
-        if (document.visibilityState !== "visible" && "Notification" in window && Notification.permission === "granted") {
-          try {
-            new Notification("New order", { body: `VS-${fresh.at(-1)!.no}`, tag: "vs-new-order" });
-          } catch {
-            /* some phones only allow notifications from an installed app */
-          }
-        }
-      }
-    };
-    void load();
-    const ch = sb
-      .channel("panel-new-orders")
-      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => void load())
-      .subscribe();
-    const t = setInterval(() => document.visibilityState === "visible" && void load(), 20_000);
-    const onVis = () => {
-      if (document.visibilityState === "visible") {
-        void load();
-        if (alarm.isOn()) void alarm.keepAwake();
-      }
-    };
-    document.addEventListener("visibilitychange", onVis);
-    return () => {
-      clearInterval(t);
-      document.removeEventListener("visibilitychange", onVis);
-      void sb.removeChannel(ch);
-    };
-  }, []);
-
-  // Keep ringing every 20 s until someone accepts the order.
-  useEffect(() => {
-    if (!alarmOn || ids.length === 0) return;
-    const t = setInterval(() => alarm.beep(), 20_000);
-    return () => clearInterval(t);
-  }, [alarmOn, ids.length]);
-
-  return { count: ids.length, alarmOn };
 }
 
 /** Thin bar on every panel page: turn on the alarm, or jump to new orders. */

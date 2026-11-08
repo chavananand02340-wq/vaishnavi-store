@@ -1,6 +1,6 @@
 "use client";
 
-import type { VariantForm } from "@/lib/catalog-admin";
+import type { VariantForm } from "@/lib/product-form";
 
 /** Size / price / stock inputs. Controlled: parent keeps the state. */
 export function VariantEditor({ v, onChange, idp }: { v: VariantForm; onChange: (v: VariantForm) => void; idp: string }) {

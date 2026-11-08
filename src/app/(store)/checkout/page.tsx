@@ -4,47 +4,31 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { formatPaise } from "@/lib/money";
-import { placeOrder, requestOrderEmail, type Quote } from "@/lib/checkout";
-import { useCart } from "@/components/store/cart";
-import { useQuote } from "@/components/store/useQuote";
-import { PIN_KEY } from "@/components/store/PincodeCheck";
+import { placeOrder, requestOrderEmail, setOrderLocation } from "@/services/checkout";
+import { useCart } from "@/state/cart";
+import { useQuote } from "@/hooks/useQuote";
 import { PageBar } from "@/components/store/PageBar";
 import { Bill } from "@/components/store/Bill";
 import { CouponBox } from "@/components/store/CouponBox";
-import { COUPON_KEY } from "@/components/store/SaleHero";
-import { saveOrder } from "@/lib/local";
-import { pinInfo, type Place, type Spot } from "@/lib/geo";
+import {
+  checkoutAttemptKey,
+  endCheckoutAttempt,
+  getSavedCoupon,
+  getSavedDetails,
+  getSavedPin,
+  saveCoupon as rememberCoupon,
+  saveDetails,
+  saveOrder,
+  savePin,
+} from "@/state/device-store";
+import { EMPTY_DETAILS, checkDetails, detailsToRemember, fullAddress, normalizeMobile, type Details } from "@/lib/checkout-form";
+import { isPincode } from "@/lib/validation";
+import { type Spot } from "@/lib/geolocation";
 import { LocationButton } from "@/components/store/LocationButton";
-import { supabase } from "@/lib/supabase/browser";
 import { TrustBadges } from "@/components/store/TrustBadges";
-import { Icon } from "@/components/Icon";
-
-const DETAILS_KEY = "vs-details-v1";
-
-/** House + street as typed, then city and state (if not already written), max 300 characters. */
-function fullAddress(d: { address: string; city: string; state: string }) {
-  let a = d.address.trim().replace(/^,\s*/, "");
-  for (const part of [d.city.trim(), d.state.trim()]) {
-    if (part && !a.toLowerCase().includes(part.toLowerCase())) a += `, ${part}`;
-  }
-  return a.slice(0, 300);
-}
-const IDEM_KEY = "vs-idem";
-
-type Details = { name: string; phone: string; email: string; address: string; landmark: string; pincode: string; city: string; state: string; instructions: string };
-const EMPTY: Details = { name: "", phone: "", email: "", address: "", landmark: "", pincode: "", city: "", state: "", instructions: "" };
-
-function idempotencyKey(): string {
-  try {
-    const existing = window.sessionStorage.getItem(IDEM_KEY);
-    if (existing) return existing;
-    const k = crypto.randomUUID();
-    window.sessionStorage.setItem(IDEM_KEY, k);
-    return k;
-  } catch {
-    return crypto.randomUUID();
-  }
-}
+import { Icon } from "@/components/ui/Icon";
+import { type Quote } from "@/types/order";
+import { lookupPincode, type Place } from "@/services/location";
 
 function Field({ id, label, hint, error, children }: { id: string; label: string; hint?: string; error?: string | null; children: React.ReactNode }) {
   return (
@@ -59,7 +43,7 @@ function Field({ id, label, hint, error, children }: { id: string; label: string
 export default function CheckoutPage() {
   const router = useRouter();
   const { ready, lines, clear } = useCart();
-  const [d, setD] = useState<Details>(EMPTY);
+  const [d, setD] = useState<Details>(EMPTY_DETAILS);
   const [payment, setPayment] = useState<"cod" | "upi" | "online">("cod");
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -69,19 +53,13 @@ export default function CheckoutPage() {
   const keyRef = useRef<string | null>(null);
 
   useEffect(() => {
-    keyRef.current = idempotencyKey();
-    try {
-      const saved = JSON.parse(window.localStorage.getItem(DETAILS_KEY) ?? "null") as Partial<Details> | null;
-      const pin = window.localStorage.getItem(PIN_KEY) ?? "";
-      setD({ ...EMPTY, ...(saved ?? {}), pincode: saved?.pincode || pin, instructions: "" });
-      const c = window.localStorage.getItem(COUPON_KEY);
-      if (c && /^[A-Z0-9]{3,20}$/.test(c)) setCoupon(c);
-    } catch {
-      /* ignore */
-    }
+    keyRef.current = checkoutAttemptKey();
+    const saved = getSavedDetails<Details>();
+    setD({ ...EMPTY_DETAILS, ...(saved ?? {}), pincode: saved?.pincode || getSavedPin() || "", instructions: "" });
+    setCoupon(getSavedCoupon());
   }, []);
 
-  const pinValid = /^[1-9]\d{5}$/.test(d.pincode);
+  const pinValid = isPincode(d.pincode);
   const [spot, setSpot] = useState<Spot | null>(null);
   const [areas, setAreas] = useState<string[]>([]);
 
@@ -90,7 +68,7 @@ export default function CheckoutPage() {
     setAreas([]);
     if (!pinValid) return;
     let live = true;
-    pinInfo(d.pincode).then((r) => {
+    lookupPincode(d.pincode).then((r) => {
       if (!live || !r.ok) return;
       setAreas(r.areas ?? []);
       setD((prev) => ({ ...prev, city: r.city ?? prev.city, state: r.state ?? prev.state }));
@@ -125,12 +103,7 @@ export default function CheckoutPage() {
 
   function saveCoupon(c: string | null) {
     setCoupon(c);
-    try {
-      if (c) window.localStorage.setItem(COUPON_KEY, c);
-      else window.localStorage.removeItem(COUPON_KEY);
-    } catch {
-      /* ignore */
-    }
+    rememberCoupon(c);
   }
 
   if (!ready) return <PageBar title="Checkout" back="/cart" />;
@@ -152,14 +125,8 @@ export default function CheckoutPage() {
     setError(null);
   };
 
-  const phoneDigits = d.phone.replace(/\D/g, "").replace(/^(91|0)(?=\d{10}$)/, "");
-  const errs = {
-    name: d.name.trim().length < 2 ? "Enter your name" : null,
-    phone: !/^[6-9]\d{9}$/.test(phoneDigits) ? "Enter a 10-digit mobile number" : null,
-    email: d.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(d.email.trim()) ? "Check your email address" : null,
-    address: d.address.trim().length < 5 ? "Enter house number, building and street" : null,
-    pincode: !pinValid ? "Enter a 6-digit PIN code" : null,
-  };
+  const phoneDigits = normalizeMobile(d.phone);
+  const errs = checkDetails(d);
   const pinError = quote && !quote.ok && quote.code === "pincode_unavailable" ? quote.message : null;
   const hasErrors = Object.values(errs).some(Boolean);
   const canSubmit = Boolean(q && q.store_open && !q.below_min_order && (q.cod_available || q.upi_available || q.online_available)) && !submitting && !loading;
@@ -187,26 +154,12 @@ export default function CheckoutPage() {
     });
     setSubmitting(false);
     if (res.ok) {
-      try {
-        const { instructions: _skip, ...keep } = d;
-        void _skip;
-        window.localStorage.setItem(DETAILS_KEY, JSON.stringify(keep));
-        window.localStorage.setItem(PIN_KEY, d.pincode);
-        window.sessionStorage.removeItem(IDEM_KEY);
-        window.localStorage.removeItem(COUPON_KEY);
-      } catch {
-        /* ignore */
-      }
-      if (spot && !res.duplicate) {
-        try {
-          await Promise.race([
-            supabase().rpc("set_order_location", { p_token: res.public_token, p_lat: spot.lat, p_lng: spot.lng, p_accuracy_m: spot.accuracy }),
-            new Promise((r) => setTimeout(r, 3000)),
-          ]);
-        } catch {
-          /* location is a bonus; the address is already saved */
-        }
-      }
+      saveDetails(detailsToRemember(d));
+      savePin(d.pincode);
+      endCheckoutAttempt();
+      rememberCoupon(null);
+      // Location is a bonus (waits at most 3 s); the address is already saved.
+      if (spot && !res.duplicate) await setOrderLocation(res.public_token, spot);
       if (!res.duplicate && payment !== "online") requestOrderEmail(res.public_token);
       saveOrder({
         token: res.public_token,

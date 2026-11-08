@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { useState } from "react";
 import { formatPaise } from "@/lib/money";
-import { waLink, type CardProduct } from "@/lib/cards";
-import { Icon } from "@/components/Icon";
-import { WaIcon } from "@/components/WaIcon";
-import { AddButton, ProductImage, HeartButton } from "./ProductCard";
-import { useCart } from "./cart";
-import { FreeDeliveryMeter } from "./CartBar";
+import { waLink } from "@/lib/catalog";
+import { WhatsAppIcon } from "@/components/ui/WhatsAppIcon";
+import { AddButton, ProductImage, HeartButton } from "@/components/store/ProductCard";
+import { useCart } from "@/state/cart";
+import { FreeDeliveryMeter } from "@/components/store/CartBar";
+import { type CardProduct } from "@/types/catalog";
 
 export function ProductDetail({ product, images, description }: { product: CardProduct; images: string[]; description: string | null }) {
   const { settings, count, subtotal } = useCart();
@@ -78,7 +78,7 @@ export function ProductDetail({ product, images, description }: { product: CardP
 
           {bulk && (
             <a href={bulk} rel="noopener" className="flex items-center gap-3 rounded-xl bg-white p-3 text-[15px] ring-1 ring-line">
-              <WaIcon tone="green" className="size-6" />
+              <WhatsAppIcon tone="green" className="size-6" />
               <span className="flex-1">Need more than 20, or a loose quantity? <b className="text-brand-700">Ask on WhatsApp</b></span>
             </a>
           )}

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { imageUrl } from "@/lib/catalog";
-import type { CardProduct } from "@/lib/cards";
+import { type CardProduct } from "@/types/catalog";
 
 // Each shelf gets its own colour so the page feels like a stocked shop.
 export const TINTS = ["#ffe9a8", "#cdeedb", "#ffd9cf", "#d6e6ff", "#e7dcff", "#c9f0ea", "#fbe0c4", "#e3efc0", "#ffd6ea", "#d9f2c8"];

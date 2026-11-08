@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { listCoupons, type PublicCoupon } from "@/lib/checkout";
+import { listCheckoutCoupons } from "@/services/checkout";
 import { formatPaise } from "@/lib/money";
-import { Icon } from "@/components/Icon";
+import { Icon } from "@/components/ui/Icon";
+import { type PublicCoupon } from "@/types/order";
 
 export function couponLabel(c: PublicCoupon) {
   const off = c.kind === "percent" ? `${c.value}% off` : `${formatPaise(c.value)} off`;
@@ -36,7 +37,7 @@ export function CouponBox({
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    listCoupons().then(setOffers).catch(() => setOffers([]));
+    listCheckoutCoupons().then(setOffers).catch(() => setOffers([]));
   }, []);
 
   function apply(code: string) {

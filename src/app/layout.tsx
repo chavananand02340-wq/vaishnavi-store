@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, Mukta } from "next/font/google";
 import "./globals.css";
+import { publicEnv } from "@/config/env";
+import { SITE_DESCRIPTION, SITE_NAME, THEME_COLOR } from "@/config/site";
 
 const bricolage = Bricolage_Grotesque({
   subsets: ["latin"],
@@ -17,19 +19,19 @@ const mukta = Mukta({
   display: "swap",
 });
 
-const site = process.env.NEXT_PUBLIC_SITE_URL;
+const site = publicEnv.siteUrl;
 
 export const metadata: Metadata = {
   metadataBase: site ? new URL(site) : undefined,
   icons: { apple: "/apple-touch-icon.png" },
-  title: { default: "Vaishnavi E-Mart", template: "%s | Vaishnavi E-Mart" },
-  description: "Groceries and daily essentials from Vaishnavi Store, delivered to your door in about 30 minutes.",
+  title: { default: SITE_NAME, template: `%s | ${SITE_NAME}` },
+  description: SITE_DESCRIPTION,
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#e30613",
+  themeColor: THEME_COLOR,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

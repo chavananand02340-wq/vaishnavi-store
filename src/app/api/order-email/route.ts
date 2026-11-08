@@ -1,22 +1,16 @@
-import { sendOrderEmails } from "@/lib/email/send";
+import { isUuid } from "@/lib/validation";
+import { AppError } from "@/lib/errors";
+import { originOf, readJson, route } from "@/server/http";
+import { sendOrderEmails } from "@/server/email/send";
 
 /**
- * Sends order emails.
- *  event "placed"  → customer receipt + owner alert (once per order)
- *  event "packing" → customer "we're packing" (once, only after the shop accepts)
+ * POST /api/order-email { token, event?: "placed" | "packing" }
  * The browser only sends the order's tracking token; details come from the database,
- * which hands them out a single time and only with NOTIFY_SECRET.
+ * which hands them out once per event and only with NOTIFY_SECRET.
+ * Unknown or already-emailed orders answer { ok: false } with status 200.
  */
-export async function POST(req: Request) {
-  let token = "";
-  let event: "placed" | "packing" = "placed";
-  try {
-    const b = (await req.json()) as { token?: unknown; event?: unknown };
-    token = String(b.token ?? "");
-    if (b.event === "packing") event = "packing";
-  } catch {
-    /* fall through */
-  }
-  if (!/^[0-9a-f-]{36}$/i.test(token)) return Response.json({ ok: false }, { status: 400 });
-  return Response.json(await sendOrderEmails(token, event, new URL(req.url).origin));
-}
+export const POST = route("order-email", async (req) => {
+  const b = await readJson<{ token: string; event: string }>(req);
+  if (!isUuid(b.token)) throw new AppError("invalid", "Bad request");
+  return Response.json(await sendOrderEmails(b.token, b.event === "packing" ? "packing" : "placed", originOf(req)));
+});

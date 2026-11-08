@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "@/lib/supabase/browser";
-import { Card, CardTitle } from "@/components/admin/ui";
-import { Icon } from "@/components/Icon";
+import { runSystemCheck } from "@/services/admin/auth";
+import { Card, CardTitle } from "@/components/admin/AdminUI";
+import { Icon } from "@/components/ui/Icon";
 
-type Result = { ok: boolean; checks?: Record<string, { ok: boolean; note: string }>; message?: string };
+type Result = Awaited<ReturnType<typeof runSystemCheck>>;
 
 const LABELS: Record<string, string> = {
   database: "Database (Supabase)",
@@ -21,11 +21,7 @@ export function SystemCheck() {
   const [mail, setMail] = useState<string | null>(null);
   const [busy, setBusy] = useState<"" | "check" | "mail">("");
 
-  async function call(q: string) {
-    const { data } = await supabase().auth.getSession();
-    const token = data.session?.access_token ?? "";
-    const r = await fetch(`/api/health${q}`, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
-    return (await r.json().catch(() => ({ ok: false, message: "No reply from the website." }))) as Result;
+  return (await r.json().catch(() => ({ ok: false, message: "No reply from the website." }))) as Result;
   }
 
   return (
@@ -37,7 +33,7 @@ export function SystemCheck() {
           disabled={busy !== ""}
           onClick={async () => {
             setBusy("check");
-            setRes(await call(""));
+            setRes(await runSystemCheck());
             setBusy("");
           }}
           className="btn flex-1 bg-slate-800 text-white"
@@ -49,7 +45,7 @@ export function SystemCheck() {
           disabled={busy !== ""}
           onClick={async () => {
             setBusy("mail");
-            const r = await call("?email=1");
+            const r = await runSystemCheck(true);
             setMail(r.message ?? (r.ok ? "Sent" : "Failed"));
             setBusy("");
           }}

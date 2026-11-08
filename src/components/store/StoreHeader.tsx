@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
-import { formatTime, isOpenNow } from "@/lib/hours";
+import { formatTime, isOpenNow } from "@/lib/time";
 import { formatPaise } from "@/lib/money";
-import { Icon } from "@/components/Icon";
-import { cleanTerm, searchProducts } from "@/lib/search";
-import type { CardProduct } from "@/lib/cards";
-import { useCart } from "./cart";
-import { PIN_KEY, PincodeCheck } from "./PincodeCheck";
+import { Icon } from "@/components/ui/Icon";
+import { cleanTerm, searchProducts } from "@/services/products";
+import { useCart } from "@/state/cart";
+import { PincodeCheck } from "@/components/store/PincodeCheck";
+import { useSavedPin } from "@/state/device-store";
+import { type CardProduct } from "@/types/catalog";
 
 /** Re-computes open/closed in the browser so cached pages stay accurate. */
 export function useOpenNow() {
@@ -163,29 +164,8 @@ export function CartButton() {
 
 /** "Deliver to 442001" chip; opens a small sheet to check or change the PIN code. */
 function DeliverChip() {
-  const [pin, setPin] = useState<string | null>(null);
+  const [pin] = useSavedPin();
   const [open, setOpen] = useState(false);
-  useEffect(() => {
-    const read = () => {
-      try {
-        const p = window.localStorage.getItem(PIN_KEY);
-        setPin(p && /^\d{6}$/.test(p) ? p : null);
-      } catch {
-        setPin(null);
-      }
-    };
-    read();
-    const on = (e: Event) => {
-      const k = e instanceof StorageEvent ? e.key : (e as CustomEvent<string>).detail;
-      if (k === PIN_KEY) read();
-    };
-    window.addEventListener("storage", on);
-    window.addEventListener("vs-local", on);
-    return () => {
-      window.removeEventListener("storage", on);
-      window.removeEventListener("vs-local", on);
-    };
-  }, []);
   return (
     <>
       <button type="button" onClick={() => setOpen(true)} className="flex min-w-0 items-center gap-1 rounded-full bg-page px-2.5 py-1.5 text-left ring-1 ring-line">

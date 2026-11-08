@@ -1,33 +1,20 @@
 "use client";
 
-import { supabase } from "@/lib/supabase/browser";
-import { istDateKey } from "@/lib/hours";
-import { useAsync, must } from "@/lib/useAsync";
-import { useTeam } from "@/components/admin/team";
+import { getLiveOrders, isAwaitingOnlinePayment } from "@/services/admin/orders";
+import { useAsync } from "@/hooks/useAsync";
+import { useTeam } from "@/state/team";
 import { OrderAlerts } from "@/components/admin/OrderAlerts";
-import { ORDER_SELECT, OrderCard, type OrderRow } from "@/components/admin/OrderCard";
-import { Empty, ErrorBox, Spinner, STATUS } from "@/components/admin/ui";
+import { OrderCard } from "@/components/admin/OrderCard";
+import { Empty, ErrorBox, Spinner, STATUS } from "@/components/admin/AdminUI";
+import type { OrderRow } from "@/types/order";
 
+/** Counter screen: every order still moving, grouped by stage, with the new-order alarm. */
 export default function LiveOrders() {
   const { role } = useTeam();
-  const { data, error, loading, reload } = useAsync(async () => {
-    const sb = supabase();
-    const since = new Date(Date.now() - 36 * 3600_000).toISOString();
-    const [active, done, s] = await Promise.all([
-      sb.from("orders").select(ORDER_SELECT).in("status", ["new", "confirmed", "out_for_delivery"]).order("created_at").limit(100),
-      sb.from("orders").select(ORDER_SELECT).in("status", ["delivered", "cancelled"]).gte("created_at", since).order("created_at", { ascending: false }).limit(50),
-      sb.from("store_settings").select("store_name, default_eta_minutes").eq("id", 1).single(),
-    ]);
-    return {
-      active: must(active) as unknown as OrderRow[],
-      done: (must(done) as unknown as OrderRow[]).filter((o) => istDateKey(o.created_at) === istDateKey(new Date())),
-      storeName: (s.data?.store_name as string) ?? "Vaishnavi Store",
-      eta: (s.data?.default_eta_minutes as number) ?? 30,
-    };
-  });
+  const { data, error, loading, reload } = useAsync(getLiveOrders);
 
   const active = data?.active ?? [];
-  const unpaidOnline = (o: OrderRow) => o.payment_method === "online" && o.payment_status !== "paid";
+  const unpaidOnline = (o: OrderRow) => isAwaitingOnlinePayment(o);
   const fresh = active.filter((o) => o.status === "new" && !unpaidOnline(o));
   const groups = [
     { key: "new", title: "New, confirm these", list: fresh },
@@ -39,7 +26,7 @@ export default function LiveOrders() {
 
   return (
     <div className="space-y-5">
-      <OrderAlerts newIds={fresh.map((o) => o.id)} latestNewNo={fresh.at(-1)?.order_no ?? null} onChange={reload} />
+      <OrderAlerts newIds={fresh.map((o) => o.id)} onChange={reload} />
 
       {/* Count strip: one colour per stage */}
       <div className="grid grid-cols-3 gap-2">

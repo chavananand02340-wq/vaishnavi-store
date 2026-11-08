@@ -2,7 +2,8 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase/browser";
+import { currentMember, homeFor, signIn } from "@/services/admin/auth";
+import { errorMessage } from "@/lib/errors";
 
 function LoginForm() {
   const router = useRouter();
@@ -15,34 +16,24 @@ function LoginForm() {
 
   // Already signed in on this phone? Go straight to the right panel.
   useEffect(() => {
-    (async () => {
-      const sb = supabase();
-      const { data } = await sb.auth.getSession();
-      if (!data.session) return;
-      const { data: row } = await sb.from("admin_users").select("role, is_active").eq("user_id", data.session.user.id).maybeSingle();
-      if (row?.is_active) router.replace(row.role === "owner" ? "/admin" : "/staff");
-    })();
+    currentMember()
+      .then((m) => m && router.replace(homeFor(m.role)))
+      .catch(() => {
+        /* not signed in or no access: stay on the form */
+      });
   }, [router]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     setError(null);
-    const sb = supabase();
-    const { data, error: err } = await sb.auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
-    if (err || !data.user) {
+    try {
+      const m = await signIn(email, password);
+      router.replace(homeFor(m.role));
+    } catch (err) {
       setBusy(false);
-      setError(err?.message?.toLowerCase().includes("fetch") ? "No internet connection. Try again." : "Wrong email or password.");
-      return;
+      setError(errorMessage(err));
     }
-    const { data: row } = await sb.from("admin_users").select("role, is_active").eq("user_id", data.user.id).maybeSingle();
-    if (!row?.is_active) {
-      await sb.auth.signOut();
-      setBusy(false);
-      setError("This account doesn't have access. Ask the shop owner.");
-      return;
-    }
-    router.replace(row.role === "owner" ? "/admin" : "/staff");
   }
 
   return (

@@ -3,44 +3,45 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase/browser";
-import { IMAGE_BUCKET, PRODUCT_SELECT, imageUrl, type Category, type Product, type Variant } from "@/lib/catalog";
-import { EMPTY_VARIANT, parseVariant, variantToForm, type VariantForm } from "@/lib/catalog-admin";
-import { useAsync, must } from "@/lib/useAsync";
-import { refreshStorefront } from "@/components/admin/team";
-import { ProductDetailsForm, type DetailsForm } from "@/components/admin/ProductDetailsForm";
+import {
+  addVariant,
+  deleteProduct,
+  deleteVariant,
+  duplicateProduct,
+  getProductForEdit,
+  removeProductPhoto,
+  setMainPhoto,
+  updateProduct,
+  updateVariant,
+} from "@/services/admin/catalog";
+import { refreshStorefront } from "@/services/admin/auth";
+import { imageUrl } from "@/lib/catalog";
+import { EMPTY_VARIANT, detailsFromProduct, detailsToRow, parseVariant, variantToForm, type DetailsForm, type VariantForm } from "@/lib/product-form";
+import { isUuid } from "@/lib/validation";
+import { useAsync } from "@/hooks/useAsync";
+import { useAction } from "@/hooks/useAction";
+import { ProductDetailsForm } from "@/components/admin/ProductDetailsForm";
 import { VariantEditor } from "@/components/admin/VariantEditor";
 import { ImageUploader } from "@/components/admin/ImageUploader";
-import { Card, CardTitle, Empty, ErrorBox, Spinner, Switch } from "@/components/admin/ui";
-import { Icon } from "@/components/Icon";
-import { useToast } from "@/components/Toast";
+import { Card, CardTitle, Empty, ErrorBox, Spinner, Switch } from "@/components/admin/AdminUI";
+import { Icon } from "@/components/ui/Icon";
+import { useToast } from "@/components/ui/Toast";
+import type { Variant } from "@/types/catalog";
 
 function SizeCard({ v, productId, canDelete, onChanged }: { v: Variant; productId: string; canDelete: boolean; onChanged: () => void }) {
   const toast = useToast();
+  const { run, isBusy: busy } = useAction();
   const [f, setF] = useState<VariantForm>(variantToForm(v));
-  const [busy, setBusy] = useState(false);
   useEffect(() => setF(variantToForm(v)), [v]);
 
   async function save() {
     const pv = parseVariant(f);
     if ("error" in pv) return toast(pv.error, "error");
-    setBusy(true);
-    const { error } = await supabase().from("product_variants").update(pv.row).eq("id", v.id).eq("product_id", productId);
-    setBusy(false);
-    if (error) return toast("Couldn't save this size", "error");
-    toast(`Saved ${pv.row.label}`);
-    void refreshStorefront();
-    onChanged();
+    await run("save", () => updateVariant(productId, v.id, pv.row), { success: `Saved ${pv.row.label}`, refreshStore: true, onSuccess: onChanged });
   }
   async function remove() {
     if (!window.confirm(`Delete size ${v.label}? Old orders are not affected.`)) return;
-    setBusy(true);
-    const { error } = await supabase().from("product_variants").delete().eq("id", v.id);
-    setBusy(false);
-    if (error) return toast("Couldn't delete this size", "error");
-    toast("Size deleted");
-    void refreshStorefront();
-    onChanged();
+    await run("remove", () => deleteVariant(v), { success: "Size deleted", refreshStore: true, onSuccess: onChanged });
   }
 
   return (
@@ -69,27 +70,19 @@ function Edit() {
   const toast = useToast();
   const id = sp.get("id") ?? "";
   const created = sp.get("created") === "1";
-  const valid = /^[0-9a-f-]{36}$/i.test(id);
+  const valid = isUuid(id);
   const [d, setD] = useState<DetailsForm | null>(null);
   const [adding, setAdding] = useState(false);
   const [nv, setNv] = useState<VariantForm>(EMPTY_VARIANT);
-  const [busy, setBusy] = useState<string | null>(null);
+  const { run, busy } = useAction();
 
-  const { data, error, loading, reload } = useAsync(async () => {
-    if (!valid) return null;
-    const sb = supabase();
-    const [p, c] = await Promise.all([
-      sb.from("products").select(`${PRODUCT_SELECT}, search_keywords`).eq("id", id).maybeSingle(),
-      sb.from("categories").select("id, name, slug, sort_order, is_active, image_path").order("sort_order"),
-    ]);
-    return { product: must(p) as unknown as Product | null, categories: must(c) as unknown as Category[] };
-  }, [id]);
+  const { data, error, loading, reload } = useAsync(async () => (valid ? getProductForEdit(id) : null), [id]);
 
   const [dFor, setDFor] = useState<string | null>(null);
   useEffect(() => {
     const p = data?.product;
     if (p && p.id === id && p.id !== dFor) {
-      setD({ name: p.name, name_local: p.name_local ?? "", category_id: p.category_id, search_keywords: p.search_keywords ?? "", description: p.description ?? "", is_active: p.is_active, is_featured: p.is_featured });
+      setD(detailsFromProduct(p));
       setDFor(p.id);
     }
   }, [data, dFor, id]);
@@ -103,84 +96,37 @@ function Edit() {
   const variants = [...p.product_variants].sort((a, b) => a.sort_order - b.sort_order);
   const images = [...p.product_images].sort((a, b) => a.sort_order - b.sort_order);
 
-  async function saveDetails() {
-    if (!d || d.name.trim().length < 2) return toast("Write the product name.", "error");
-    setBusy("details");
-    const { error: e } = await supabase()
-      .from("products")
-      .update({ name: d.name.trim(), name_local: d.name_local.trim() || null, category_id: d.category_id, search_keywords: d.search_keywords.trim() || null, description: d.description.trim() || null, is_active: d.is_active, is_featured: d.is_featured })
-      .eq("id", id);
-    setBusy(null);
-    if (e) return toast("Couldn't save details", "error");
-    toast("Details saved");
-    void refreshStorefront();
-    reload();
-  }
+  const product = p;
+  const after = { refreshStore: true, onSuccess: reload };
+
+  const saveDetails = () => d && run("details", () => updateProduct(id, detailsToRow(d)), { success: "Details saved", ...after });
 
   async function addSize() {
     const pv = parseVariant(nv);
     if ("error" in pv) return toast(pv.error, "error");
-    setBusy("add");
-    const { error: e } = await supabase().from("product_variants").insert({ ...pv.row, product_id: id, sort_order: variants.length * 10 });
-    setBusy(null);
-    if (e) return toast("Couldn't add size", "error");
-    toast(`Added ${pv.row.label}`);
-    setNv(EMPTY_VARIANT);
-    setAdding(false);
-    void refreshStorefront();
-    reload();
+    await run("add", () => addVariant(id, pv.row, variants.length * 10), {
+      success: `Added ${pv.row.label}`,
+      ...after,
+      onSuccess: () => {
+        setNv(EMPTY_VARIANT);
+        setAdding(false);
+        reload();
+      },
+    });
   }
 
-  async function setMain(imgId: string) {
-    const order = [imgId, ...images.map((i) => i.id!).filter((x) => x !== imgId)];
-    setBusy("img");
-    await Promise.all(order.map((x, i) => supabase().from("product_images").update({ sort_order: i * 10 }).eq("id", x)));
-    setBusy(null);
-    void refreshStorefront();
-    reload();
-  }
+  const setMain = (imgId: string) => run("img", () => setMainPhoto(images, imgId), after);
+  const removeImage = (imgId: string, path: string) => run("img", () => removeProductPhoto({ id: imgId, storage_path: path }), { success: "Photo removed", ...after });
 
-  async function removeImage(imgId: string, path: string) {
-    setBusy("img");
-    const sb = supabase();
-    await sb.from("product_images").delete().eq("id", imgId);
-    await sb.storage.from(IMAGE_BUCKET).remove([path]);
-    setBusy(null);
-    toast("Photo removed");
-    void refreshStorefront();
-    reload();
-  }
-
-  async function duplicate() {
-    if (!p) return;
-    setBusy("dup");
-    const sb = supabase();
-    const ins = await sb
-      .from("products")
-      .insert({ name: `${p.name} (copy)`.slice(0, 120), name_local: p.name_local ?? null, category_id: p.category_id, description: p.description, search_keywords: p.search_keywords, is_active: false, is_featured: false })
-      .select("id")
-      .single();
-    if (ins.data) {
-      await sb.from("product_variants").insert(variants.map((v) => ({ product_id: ins.data.id, label: v.label, price_paise: v.price_paise, mrp_paise: v.mrp_paise, sort_order: v.sort_order, stock_qty: 0 })));
-      toast("Copy made. It's hidden with stock 0 until you edit it.");
-      router.replace(`/admin/products/edit?id=${ins.data.id}`);
-    } else toast("Couldn't duplicate", "error");
-    setBusy(null);
-  }
+  const duplicate = () =>
+    run("dup", () => duplicateProduct(product), {
+      success: "Copy made. It's hidden with stock 0 until you edit it.",
+      onSuccess: (newId) => router.replace(`/admin/products/edit?id=${newId}`),
+    });
 
   async function del() {
-    if (!p || !window.confirm(`Delete "${p.name}" permanently? Old orders keep their details. Hiding it is usually better.`)) return;
-    setBusy("del");
-    const sb = supabase();
-    const { error: e } = await sb.from("products").delete().eq("id", id);
-    if (e) {
-      setBusy(null);
-      return toast("Couldn't delete", "error");
-    }
-    if (images.length) await sb.storage.from(IMAGE_BUCKET).remove(images.map((i) => i.storage_path));
-    void refreshStorefront();
-    toast("Product deleted");
-    router.replace("/admin/products");
+    if (!window.confirm(`Delete "${product.name}" permanently? Old orders keep their details. Hiding it is usually better.`)) return;
+    await run("del", () => deleteProduct(product), { success: "Product deleted", refreshStore: true, onSuccess: () => router.replace("/admin/products") });
   }
 
   return (

@@ -1,32 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "@/lib/supabase/browser";
+import { addPincode, deletePincode, listPincodes, updatePincode, type DeliveryPin as Pin } from "@/services/admin/settings";
 import { formatPaise, paiseToRupeesInput, rupeesToPaise } from "@/lib/money";
-import { useAsync, must } from "@/lib/useAsync";
-import { refreshStorefront } from "@/components/admin/team";
-import { Card, CardTitle, Empty, ErrorBox, PageTitle, Spinner, Switch } from "@/components/admin/ui";
-import { Icon } from "@/components/Icon";
-import { useToast } from "@/components/Toast";
-
-type Pin = { pincode: string; area_name: string | null; is_active: boolean; fee_override_paise: number | null };
+import { useAsync } from "@/hooks/useAsync";
+import { useAction } from "@/hooks/useAction";
+import { useToast } from "@/components/ui/Toast";
+import { Card, CardTitle, Empty, ErrorBox, PageTitle, Spinner, Switch } from "@/components/admin/AdminUI";
+import { Icon } from "@/components/ui/Icon";
 
 function PinRow({ p, baseFee, onChanged }: { p: Pin; baseFee: number; onChanged: () => void }) {
   const toast = useToast();
+  const { run, isBusy: busy } = useAction();
   const [area, setArea] = useState(p.area_name ?? "");
   const [fee, setFee] = useState(paiseToRupeesInput(p.fee_override_paise));
-  const [busy, setBusy] = useState(false);
   const dirty = area !== (p.area_name ?? "") || fee !== paiseToRupeesInput(p.fee_override_paise);
 
-  async function save(patch: Partial<Pin>, msg: string) {
-    setBusy(true);
-    const { error } = await supabase().from("delivery_pincodes").update(patch).eq("pincode", p.pincode);
-    setBusy(false);
-    if (error) return toast("Couldn't save", "error");
-    toast(msg);
-    void refreshStorefront();
-    onChanged();
-  }
+  const save = (patch: Partial<Pin>, msg: string) => run("save", () => updatePincode(p.pincode, patch), { success: msg, refreshStore: true, onSuccess: onChanged });
   async function saveText() {
     const f = fee.trim() ? rupeesToPaise(fee) : null;
     if (fee.trim() && f == null) return toast("Fee isn't a valid amount", "error");
@@ -34,12 +24,7 @@ function PinRow({ p, baseFee, onChanged }: { p: Pin; baseFee: number; onChanged:
   }
   async function remove() {
     if (!window.confirm(`Stop delivering to ${p.pincode} and remove it? Past orders are not affected.`)) return;
-    setBusy(true);
-    const { error } = await supabase().from("delivery_pincodes").delete().eq("pincode", p.pincode);
-    setBusy(false);
-    if (error) return toast("Couldn't remove", "error");
-    toast(`Removed ${p.pincode}`);
-    onChanged();
+    await run("remove", () => deletePincode(p.pincode), { success: `Removed ${p.pincode}`, onSuccess: onChanged });
   }
 
   return (
@@ -79,28 +64,19 @@ function PinRow({ p, baseFee, onChanged }: { p: Pin; baseFee: number; onChanged:
 }
 
 export default function PincodesPage() {
-  const toast = useToast();
   const [pin, setPin] = useState("");
-  const [busy, setBusy] = useState(false);
-  const { data, error, loading, reload } = useAsync(async () => {
-    const sb = supabase();
-    const [p, s] = await Promise.all([
-      sb.from("delivery_pincodes").select("pincode, area_name, is_active, fee_override_paise").order("pincode"),
-      sb.from("store_settings").select("delivery_fee_paise").eq("id", 1).single(),
-    ]);
-    return { pins: must(p) as Pin[], baseFee: (s.data?.delivery_fee_paise as number) ?? 3000 };
-  });
+  const { run, isBusy: busy } = useAction();
+  const { data, error, loading, reload } = useAsync(listPincodes);
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
-    if (!/^[1-9]\d{5}$/.test(pin)) return toast("PIN code must be 6 digits", "error");
-    setBusy(true);
-    const { error: err } = await supabase().from("delivery_pincodes").insert({ pincode: pin, is_active: true });
-    setBusy(false);
-    if (err) return toast(err.code === "23505" ? "That PIN code is already in the list" : "Couldn't add PIN code", "error");
-    toast(`Now delivering to ${pin}`);
-    setPin("");
-    reload();
+    await run("add", () => addPincode(pin), {
+      success: `Now delivering to ${pin}`,
+      onSuccess: () => {
+        setPin("");
+        reload();
+      },
+    });
   }
 
   return (

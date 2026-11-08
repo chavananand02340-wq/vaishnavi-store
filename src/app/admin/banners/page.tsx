@@ -1,44 +1,25 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { supabase } from "@/lib/supabase/browser";
-import { IMAGE_BUCKET, imageUrl } from "@/lib/catalog";
-import { shrinkImage } from "@/lib/image";
-import { useAsync, must } from "@/lib/useAsync";
-import { refreshStorefront } from "@/components/admin/team";
-import { Card, CardTitle, Empty, ErrorBox, PageTitle, Spinner, Switch } from "@/components/admin/ui";
-import { Icon } from "@/components/Icon";
-import { useToast } from "@/components/Toast";
+import { addBanner, deleteBanner, listBanners, updateBanner, type BannerRow as Banner } from "@/services/admin/marketing";
+import { saveOrder, swapped } from "@/services/admin/catalog";
+import { imageUrl } from "@/lib/catalog";
+import { useAsync } from "@/hooks/useAsync";
+import { useAction } from "@/hooks/useAction";
+import { Card, CardTitle, Empty, ErrorBox, PageTitle, Spinner, Switch } from "@/components/admin/AdminUI";
+import { Icon } from "@/components/ui/Icon";
 import { OfferBannerEditor } from "@/components/admin/OfferBannerEditor";
 
-type Banner = { id: string; image_path: string; link_url: string | null; alt_text: string | null; sort_order: number; is_active: boolean };
-
 function BannerRow({ b, first, last, onMove, onChanged }: { b: Banner; first: boolean; last: boolean; onMove: (d: -1 | 1) => void; onChanged: () => void }) {
-  const toast = useToast();
+  const { run, isBusy: busy } = useAction();
   const [alt, setAlt] = useState(b.alt_text ?? "");
   const [link, setLink] = useState(b.link_url ?? "");
-  const [busy, setBusy] = useState(false);
   const dirty = alt !== (b.alt_text ?? "") || link !== (b.link_url ?? "");
 
-  async function save(patch: Partial<Banner>, msg: string) {
-    setBusy(true);
-    const { error } = await supabase().from("banners").update(patch).eq("id", b.id);
-    setBusy(false);
-    if (error) return toast("Couldn't save", "error");
-    toast(msg);
-    void refreshStorefront();
-    onChanged();
-  }
+  const save = (patch: Partial<Banner>, msg: string) => run("save", () => updateBanner(b.id, patch), { success: msg, refreshStore: true, onSuccess: onChanged });
   async function remove() {
     if (!window.confirm("Delete this banner?")) return;
-    setBusy(true);
-    const sb = supabase();
-    await sb.from("banners").delete().eq("id", b.id);
-    await sb.storage.from(IMAGE_BUCKET).remove([b.image_path]);
-    setBusy(false);
-    toast("Banner deleted");
-    void refreshStorefront();
-    onChanged();
+    await run("remove", () => deleteBanner(b), { success: "Banner deleted", refreshStore: true, onSuccess: onChanged });
   }
 
   return (
@@ -79,45 +60,19 @@ function BannerRow({ b, first, last, onMove, onChanged }: { b: Banner; first: bo
 }
 
 export default function BannersPage() {
-  const toast = useToast();
   const input = useRef<HTMLInputElement>(null);
-  const [busy, setBusy] = useState(false);
-  const { data, error, loading, reload } = useAsync(async () => must(await supabase().from("banners").select("*").order("sort_order")) as Banner[]);
+  const { run, isBusy: busy } = useAction();
+  const { data, error, loading, reload } = useAsync(listBanners);
   const list = data ?? [];
 
   async function upload(files: FileList | null) {
     const file = files?.[0];
     if (!file) return;
-    setBusy(true);
-    try {
-      const { blob, ext } = await shrinkImage(file, 1600);
-      const path = `banners/${crypto.randomUUID()}.${ext}`;
-      const sb = supabase();
-      const up = await sb.storage.from(IMAGE_BUCKET).upload(path, blob, { contentType: blob.type, cacheControl: "31536000" });
-      if (up.error) throw new Error(up.error.message);
-      const ins = await sb.from("banners").insert({ image_path: path, sort_order: ((list.at(-1)?.sort_order ?? 0) + 10), is_active: true });
-      if (ins.error) {
-        await sb.storage.from(IMAGE_BUCKET).remove([path]);
-        throw new Error(ins.error.message);
-      }
-      toast("Banner added");
-      void refreshStorefront();
-      reload();
-    } catch (e) {
-      toast(e instanceof Error ? `Upload failed: ${e.message}` : "Upload failed", "error");
-    } finally {
-      setBusy(false);
-      if (input.current) input.current.value = "";
-    }
+    await run("upload", () => addBanner(file, list), { success: "Banner added", failure: "Upload failed", refreshStore: true, onSuccess: reload });
+    if (input.current) input.current.value = "";
   }
 
-  async function move(i: number, d: -1 | 1) {
-    const order = list.map((b) => b.id);
-    [order[i], order[i + d]] = [order[i + d], order[i]];
-    await Promise.all(order.map((id, k) => supabase().from("banners").update({ sort_order: (k + 1) * 10 }).eq("id", id)));
-    void refreshStorefront();
-    reload();
-  }
+  const move = (i: number, d: -1 | 1) => run("move", () => saveOrder("banners", swapped(list, i, d)), { refreshStore: true, onSuccess: reload });
 
   return (
     <div className="space-y-4">

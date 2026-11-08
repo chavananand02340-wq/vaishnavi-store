@@ -3,71 +3,42 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
-import { supabase } from "@/lib/supabase/browser";
-import type { Category } from "@/lib/catalog";
-import { EMPTY_VARIANT, parseVariant, type VariantForm } from "@/lib/catalog-admin";
-import { useAsync, must } from "@/lib/useAsync";
-import { refreshStorefront } from "@/components/admin/team";
-import { ProductDetailsForm, type DetailsForm } from "@/components/admin/ProductDetailsForm";
+import { createProduct, listCategories } from "@/services/admin/catalog";
+import { EMPTY_VARIANT, detailsToRow, emptyDetails, parseVariant, type DetailsForm, type VariantForm } from "@/lib/product-form";
+import { useAsync } from "@/hooks/useAsync";
+import { useAction } from "@/hooks/useAction";
+import { ProductDetailsForm } from "@/components/admin/ProductDetailsForm";
 import { VariantEditor } from "@/components/admin/VariantEditor";
-import { Card, CardTitle, PageTitle, Spinner } from "@/components/admin/ui";
-import { Icon } from "@/components/Icon";
-import { useToast } from "@/components/Toast";
+import { Card, CardTitle, PageTitle, Spinner } from "@/components/admin/AdminUI";
+import { Icon } from "@/components/ui/Icon";
+import { useToast } from "@/components/ui/Toast";
 
 function NewProduct() {
   const router = useRouter();
   const sp = useSearchParams();
   const toast = useToast();
-  const { data: categories, loading } = useAsync(async () => {
-    const r = await supabase().from("categories").select("id, name, slug, sort_order, is_active, image_path").order("sort_order");
-    return must(r) as unknown as Category[];
-  });
-  const fresh = (): DetailsForm => ({ name: "", name_local: "", category_id: sp.get("cat") ?? "", search_keywords: "", description: "", is_active: true, is_featured: false });
+  const { data: categories, loading } = useAsync(listCategories);
+  const fresh = (): DetailsForm => emptyDetails(sp.get("cat") ?? "");
   const [d, setD] = useState<DetailsForm>(fresh);
   const [v, setV] = useState<VariantForm>(EMPTY_VARIANT);
-  const [saving, setSaving] = useState(false);
   const [added, setAdded] = useState<string[]>([]);
+  const { run, isBusy: saving } = useAction();
 
   async function save(andAnother: boolean) {
-    if (d.name.trim().length < 2) return toast("Write the product name.", "error");
-    if (!d.category_id) return toast("Choose a category.", "error");
     const pv = parseVariant(v);
     if ("error" in pv) return toast(pv.error, "error");
-    setSaving(true);
-    const sb = supabase();
-    const ins = await sb
-      .from("products")
-      .insert({
-        name: d.name.trim(),
-        name_local: d.name_local.trim() || null,
-        category_id: d.category_id,
-        search_keywords: d.search_keywords.trim() || null,
-        description: d.description.trim() || null,
-        is_active: d.is_active,
-        is_featured: d.is_featured,
-      })
-      .select("id")
-      .single();
-    if (ins.error || !ins.data) {
-      setSaving(false);
-      return toast("Couldn't save the product. Check your internet.", "error");
-    }
-    const vr = await sb.from("product_variants").insert({ ...pv.row, product_id: ins.data.id, sort_order: 0 });
-    setSaving(false);
-    if (vr.error) {
-      await sb.from("products").delete().eq("id", ins.data.id);
-      return toast("Couldn't save the price. Please try again.", "error");
-    }
-    void refreshStorefront();
-    if (andAnother) {
-      toast(`Added ${d.name.trim()}`);
-      setAdded((a) => [d.name.trim(), ...a].slice(0, 5));
-      setD({ ...fresh(), category_id: d.category_id });
-      setV(EMPTY_VARIANT);
-      window.scrollTo({ top: 0, behavior: "smooth" });
-      return;
-    }
-    router.replace(`/admin/products/edit?id=${ins.data.id}&created=1`);
+    const name = d.name.trim();
+    await run("save", () => createProduct(detailsToRow(d), pv.row), {
+      refreshStore: true,
+      onSuccess: (id) => {
+        if (!andAnother) return router.replace(`/admin/products/edit?id=${id}&created=1`);
+        toast(`Added ${name}`);
+        setAdded((a) => [name, ...a].slice(0, 5));
+        setD({ ...fresh(), category_id: d.category_id });
+        setV(EMPTY_VARIANT);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      },
+    });
   }
 
   if (loading) return <Spinner />;

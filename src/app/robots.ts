@@ -1,7 +1,8 @@
 import type { MetadataRoute } from "next";
+import { publicEnv } from "@/config/env";
 
 export default function robots(): MetadataRoute.Robots {
-  const site = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
+  const site = publicEnv.siteUrl;
   return {
     rules: [
       {

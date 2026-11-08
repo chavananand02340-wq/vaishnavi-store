@@ -2,14 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { formatTime } from "@/lib/hours";
-import { waLink } from "@/lib/cards";
-import { Icon } from "@/components/Icon";
-import { WaIcon } from "@/components/WaIcon";
-import { useCart } from "./cart";
-import { LEGAL_LINKS } from "@/lib/legal-links";
-import { TrustBadges } from "./TrustBadges";
-
+import { formatTime } from "@/lib/time";
+import { waLink } from "@/lib/catalog";
+import { Icon } from "@/components/ui/Icon";
+import { WhatsAppIcon } from "@/components/ui/WhatsAppIcon";
+import { useCart } from "@/state/cart";
+import { LEGAL_LINKS } from "@/config/site";
+import { TrustBadges } from "@/components/store/TrustBadges";
 
 export function StoreFooter() {
   const { settings: s } = useCart();
@@ -38,7 +37,7 @@ export function StoreFooter() {
           )}
           {wa && (
             <a href={wa} rel="noopener" className="flex items-center gap-3 rounded-xl bg-[#25d366] px-4 py-3 text-[15px] font-bold text-[#073b20]">
-              <WaIcon /> WhatsApp us
+              <WhatsAppIcon /> WhatsApp us
             </a>
           )}
           <div className="flex gap-2">

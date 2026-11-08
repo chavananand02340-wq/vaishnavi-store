@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getCatalog, getCategories } from "@/lib/store-data";
+import { getCatalog, getCategories } from "@/services/catalog";
 import { StoreHeader } from "@/components/store/StoreHeader";
 import { CategoryGrid } from "@/components/store/CategoryGrid";
 

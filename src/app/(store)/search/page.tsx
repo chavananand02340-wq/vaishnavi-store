@@ -3,18 +3,20 @@
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import Link from "next/link";
-import { waLink, type CardProduct } from "@/lib/cards";
-import { searchProducts } from "@/lib/search";
+import { waLink } from "@/lib/catalog";
+import { searchProducts } from "@/services/products";
+import { ErrorState } from "@/components/store/ErrorState";
 import { GridSkeleton } from "@/components/store/Skeleton";
-import { useAsync } from "@/lib/useAsync";
-import { useCart } from "@/components/store/cart";
+import { useAsync } from "@/hooks/useAsync";
+import { useCart } from "@/state/cart";
 import { StoreHeader } from "@/components/store/StoreHeader";
 import { ProductGrid } from "@/components/store/ProductCard";
+import { type CardProduct } from "@/types/catalog";
 
 function Results() {
   const term = (useSearchParams().get("q") ?? "").trim().slice(0, 60);
   const { settings } = useCart();
-  const { data, loading } = useAsync(async (): Promise<CardProduct[]> => searchProducts(term, 40), [term]);
+  const { data, loading, error, reload } = useAsync(async (): Promise<CardProduct[]> => searchProducts(term, 40), [term]);
   const wa = waLink(settings?.whatsapp_number, `Hello, do you have "${term}"?`);
 
   return (
@@ -33,8 +35,9 @@ function Results() {
         </div>
       )}
       {term.length > 0 && term.length < 2 && <p className="text-muted">Type at least 2 letters.</p>}
+      {error && term.length >= 2 && <ErrorState title="Search didn't work" message={error} onRetry={reload} />}
       {loading && term.length >= 2 && <GridSkeleton count={6} />}
-      {!loading && term.length >= 2 && data?.length === 0 && (
+      {!loading && !error && term.length >= 2 && data?.length === 0 && (
         <div className="rounded-[var(--radius-card)] bg-white p-4 ring-1 ring-line">
           <p className="text-[15px]">Nothing found for “{term}”. Try another word, like “rice” or “oil”.</p>
           {wa && <a href={wa} rel="noopener" className="btn-brand mt-3">Ask the shop on WhatsApp</a>}

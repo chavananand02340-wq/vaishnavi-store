@@ -46,6 +46,7 @@ await check("security headers", async () => {
   const h = (k) => r.headers.get(k) || "";
   return ok(h("x-frame-options") === "DENY" && h("x-content-type-options") === "nosniff" && h("referrer-policy"), `frame=${h("x-frame-options")} nosniff=${h("x-content-type-options")} referrer=${h("referrer-policy")}`);
 });
+await check("live location allowed (Permissions-Policy)", async () => { const r = await get("/checkout"); const pp = r.headers.get("permissions-policy") || ""; return ok(/geolocation=\(self\)/.test(pp), pp); });
 await check("PIN lookup (442001 → Wardha)", async () => { const r = await get("/api/pincode?pin=442001"); const j = await r.json().catch(() => ({})); return ok(j.ok && /wardha/i.test(j.city || "") && /maharashtra/i.test(j.state || ""), `${r.status} ${j.city || "-"}, ${j.state || "-"}`); });
 await check("served by Cloudflare", async () => { const r = await get("/"); return ok((r.headers.get("server") || "").includes("cloudflare"), r.headers.get("server")); });
 

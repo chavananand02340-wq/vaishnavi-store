@@ -1,9 +1,8 @@
 "use client";
 
-import type { Category } from "@/lib/catalog";
-import { Switch } from "./ui";
-
-export type DetailsForm = { name: string; name_local: string; category_id: string; search_keywords: string; description: string; is_active: boolean; is_featured: boolean };
+import type { Category } from "@/types/catalog";
+import { Switch } from "@/components/admin/AdminUI";
+import type { DetailsForm } from "@/lib/product-form";
 
 export function ProductDetailsForm({ v, onChange, categories }: { v: DetailsForm; onChange: (v: DetailsForm) => void; categories: Category[] }) {
   const set = (k: keyof DetailsForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => onChange({ ...v, [k]: e.target.value });

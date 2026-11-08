@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Icon } from "@/components/Icon";
+import { Icon } from "@/components/ui/Icon";
 
 /** Slim top bar for cart, checkout and order pages. */
 export function PageBar({ title, back = "/", right }: { title: string; back?: string; right?: React.ReactNode }) {

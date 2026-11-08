@@ -2,45 +2,26 @@
 
 import Link from "next/link";
 import { useRef, useState } from "react";
-import { supabase } from "@/lib/supabase/browser";
-import { IMAGE_BUCKET, imageUrl, slugify, type Category } from "@/lib/catalog";
-import { shrinkImage } from "@/lib/image";
-import { useAsync, must } from "@/lib/useAsync";
-import { refreshStorefront } from "@/components/admin/team";
-import { Card, Empty, ErrorBox, PageTitle, Spinner, Switch } from "@/components/admin/ui";
-import { Icon } from "@/components/Icon";
-import { useToast } from "@/components/Toast";
+import { addCategory, deleteCategory, listCategoriesWithCounts, saveOrder, setCategoryPhoto, swapped, updateCategory } from "@/services/admin/catalog";
+import { imageUrl } from "@/lib/catalog";
+import { useAsync } from "@/hooks/useAsync";
+import { useAction } from "@/hooks/useAction";
+import { Card, Empty, ErrorBox, PageTitle, Spinner, Switch } from "@/components/admin/AdminUI";
+import { Icon } from "@/components/ui/Icon";
+import type { Category } from "@/types/catalog";
 
 const STARTERS = ["Atta, Rice & Dal", "Oil & Ghee", "Masala & Spices", "Snacks & Biscuits", "Tea, Coffee & Drinks", "Dairy & Breakfast", "Personal Care", "Cleaning & Household"];
 
 function CategoryPhoto({ c, onChanged }: { c: Category; onChanged: () => void }) {
-  const toast = useToast();
   const input = useRef<HTMLInputElement>(null);
-  const [busy, setBusy] = useState(false);
+  const { run, isBusy: busy } = useAction();
   const url = imageUrl(c.image_path);
 
   async function upload(files: FileList | null) {
     const file = files?.[0];
     if (!file) return;
-    setBusy(true);
-    try {
-      const sb = supabase();
-      const { blob, ext } = await shrinkImage(file, 800);
-      const path = `categories/${c.id}/${crypto.randomUUID()}.${ext}`;
-      const up = await sb.storage.from(IMAGE_BUCKET).upload(path, blob, { contentType: blob.type, cacheControl: "31536000" });
-      if (up.error) throw new Error(up.error.message);
-      const { error } = await sb.from("categories").update({ image_path: path }).eq("id", c.id);
-      if (error) throw new Error(error.message);
-      if (c.image_path) await sb.storage.from(IMAGE_BUCKET).remove([c.image_path]);
-      toast("Category photo saved");
-      void refreshStorefront();
-      onChanged();
-    } catch (e) {
-      toast(e instanceof Error ? `Upload failed: ${e.message}` : "Upload failed", "error");
-    } finally {
-      setBusy(false);
-      if (input.current) input.current.value = "";
-    }
+    await run("photo", () => setCategoryPhoto(c, file), { success: "Category photo saved", failure: "Upload failed", refreshStore: true, onSuccess: onChanged });
+    if (input.current) input.current.value = "";
   }
 
   return (
@@ -62,80 +43,34 @@ function CategoryPhoto({ c, onChanged }: { c: Category; onChanged: () => void })
 }
 
 export default function CategoriesPage() {
-  const toast = useToast();
   const [name, setName] = useState("");
-  const [busy, setBusy] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
+  const { run, busy } = useAction();
 
-  const { data, error, loading, reload } = useAsync(async () => {
-    const sb = supabase();
-    const [c, p] = await Promise.all([
-      sb.from("categories").select("id, name, slug, sort_order, is_active, image_path").order("sort_order").order("name"),
-      sb.from("products").select("category_id"),
-    ]);
-    const count = new Map<string, number>();
-    for (const r of (p.data ?? []) as { category_id: string }[]) count.set(r.category_id, (count.get(r.category_id) ?? 0) + 1);
-    return { cats: must(c) as unknown as Category[], count };
-  });
+  const { data, error, loading, reload } = useAsync(listCategoriesWithCounts);
   const cats = data?.cats ?? [];
 
-  async function uniqueSlug(base: string) {
-    const taken = new Set(cats.map((c) => c.slug));
-    let s = base;
-    for (let i = 2; taken.has(s); i++) s = `${base}-${i}`;
-    return s;
-  }
+  const add = (n: string) =>
+    run("add", () => addCategory(n, cats), {
+      success: (added) => `Added ${added}`,
+      failure: "Couldn't add category",
+      refreshStore: true,
+      onSuccess: () => {
+        setName("");
+        reload();
+      },
+    });
 
-  async function add(n: string) {
-    const clean = n.trim();
-    if (clean.length < 2) return toast("Write a category name.", "error");
-    setBusy("add");
-    const { error: e } = await supabase()
-      .from("categories")
-      .insert({ name: clean, slug: await uniqueSlug(slugify(clean)), sort_order: (cats.at(-1)?.sort_order ?? 0) + 10, is_active: true });
-    setBusy(null);
-    if (e) return toast("Couldn't add category", "error");
-    setName("");
-    toast(`Added ${clean}`);
-    void refreshStorefront();
-    reload();
-  }
+  const update = (c: Category, patch: Partial<Category>, msg: string) =>
+    run(c.id, () => updateCategory(c.id, patch), { success: msg, failure: "Couldn't save", refreshStore: true, onSuccess: reload });
 
-  async function update(c: Category, patch: Partial<Category>, msg: string) {
-    setBusy(c.id);
-    const { error: e } = await supabase().from("categories").update(patch).eq("id", c.id);
-    setBusy(null);
-    if (e) return toast("Couldn't save", "error");
-    toast(msg);
-    void refreshStorefront();
-    reload();
-  }
-
-  async function move(i: number, dir: -1 | 1) {
-    const a = cats[i];
-    const b = cats[i + dir];
-    if (!a || !b) return;
-    setBusy(a.id);
-    const sb = supabase();
-    // Re-number everything so positions are always clean.
-    const order = cats.map((c) => c.id);
-    [order[i], order[i + dir]] = [order[i + dir], order[i]];
-    await Promise.all(order.map((id, k) => sb.from("categories").update({ sort_order: (k + 1) * 10 }).eq("id", id)));
-    setBusy(null);
-    void refreshStorefront();
-    reload();
-  }
+  // Re-number everything so positions stay clean.
+  const move = (i: number, dir: -1 | 1) => run(cats[i].id, () => saveOrder("categories", swapped(cats, i, dir)), { refreshStore: true, onSuccess: reload });
 
   async function remove(c: Category) {
     if (!window.confirm(`Delete the empty category "${c.name}"?`)) return;
-    setBusy(c.id);
-    const { error: e } = await supabase().from("categories").delete().eq("id", c.id);
-    setBusy(null);
-    if (e) return toast("Couldn't delete. Move its products first.", "error");
-    toast("Category deleted");
-    void refreshStorefront();
-    reload();
+    await run(c.id, () => deleteCategory(c), { success: "Category deleted", failure: "Couldn't delete. Move its products first.", refreshStore: true, onSuccess: reload });
   }
 
   return (

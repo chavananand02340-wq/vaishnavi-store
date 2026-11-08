@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getCategories, getProduct } from "@/lib/store-data";
-import { toCard } from "@/lib/cards";
-import { imageUrl } from "@/lib/catalog";
+import { getCategories, getProduct } from "@/services/catalog";
+import { toCard, imageUrl } from "@/lib/catalog";
 import { StoreHeader } from "@/components/store/StoreHeader";
 import { ProductDetail } from "@/components/store/ProductDetail";
-import { Icon } from "@/components/Icon";
+import { Icon } from "@/components/ui/Icon";
 
 type Props = { params: Promise<{ id: string }> };
 

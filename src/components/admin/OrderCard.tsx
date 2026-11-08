@@ -2,50 +2,18 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { supabase } from "@/lib/supabase/browser";
+import { orderActions } from "@/services/admin/orders";
+import { orderLabel } from "@/config/site";
+import type { ActionResult, OrderRow } from "@/types/order";
 import { formatPaise } from "@/lib/money";
-import { istTime } from "@/lib/hours";
-import { Icon } from "@/components/Icon";
-import { WaIcon } from "@/components/WaIcon";
-import { requestOrderEmail } from "@/lib/checkout";
-import { useToast } from "@/components/Toast";
-import { STATUS, StatusPill } from "./ui";
+import { istDate, istTime } from "@/lib/time";
+import { Icon } from "@/components/ui/Icon";
+import { WhatsAppIcon } from "@/components/ui/WhatsAppIcon";
+import { requestOrderEmail } from "@/services/checkout";
+import { useToast } from "@/components/ui/Toast";
+import { STATUS, StatusPill } from "@/components/admin/AdminUI";
 
-export type OrderItem = { id: number; product_name: string; variant_label: string; qty: number; unit_price_paise: number; line_total_paise: number; is_unavailable: boolean };
-export type OrderRow = {
-  id: string;
-  order_no: number;
-  public_token: string;
-  status: "new" | "confirmed" | "out_for_delivery" | "delivered" | "cancelled";
-  customer_name: string;
-  phone: string;
-  address_line: string;
-  landmark: string | null;
-  pincode: string;
-  instructions: string | null;
-  subtotal_paise: number;
-  delivery_fee_paise: number;
-  discount_paise: number;
-  coupon_code: string | null;
-  customer_email: string | null;
-  delivery_lat?: number | null;
-  delivery_lng?: number | null;
-  location_accuracy_m?: number | null;
-  total_paise: number;
-  payment_method: "cod" | "upi" | "online";
-  payment_status: "unpaid" | "awaiting_verification" | "paid";
-  upi_utr: string | null;
-  eta_minutes: number | null;
-  cancel_reason: string | null;
-  created_at: string;
-  confirmed_at: string | null;
-  order_items: OrderItem[];
-};
-
-export const ORDER_SELECT =
-  "*, order_items(id, product_name, variant_label, qty, unit_price_paise, line_total_paise, is_unavailable)";
-
-const NEXT: Partial<Record<OrderRow["status"], { to: string; label: string; icon: string }>> = {
+const NEXT: Partial<Record<OrderRow["status"], { to: OrderRow["status"]; label: string; icon: string }>> = {
   new: { to: "confirmed", label: "Confirm order", icon: "check" },
   confirmed: { to: "out_for_delivery", label: "Send for delivery", icon: "truck" },
   out_for_delivery: { to: "delivered", label: "Mark delivered", icon: "check" },
@@ -54,7 +22,7 @@ const NEXT: Partial<Record<OrderRow["status"], { to: string; label: string; icon
 const PAYMENT_LABEL = { unpaid: "Not collected", awaiting_verification: "Check UPI app", paid: "Paid" } as const;
 
 function waMessage(o: OrderRow, storeName: string): string {
-  const no = `VS-${o.order_no}`;
+  const no = orderLabel(o.order_no);
   const site = typeof window !== "undefined" ? window.location.origin : "";
   const link = site ? `\nTrack your order: ${site}/order?t=${o.public_token}` : "";
   const items = o.order_items.filter((i) => !i.is_unavailable).map((i) => `${i.qty} x ${i.product_name} (${i.variant_label})`).join("\n");
@@ -91,17 +59,14 @@ export function OrderCard({
   const editable = o.status === "new" || o.status === "confirmed";
   const liveItems = o.order_items.filter((i) => !i.is_unavailable).length;
 
-  async function call(key: string, fn: string, args: Record<string, unknown>, ok: string) {
+  /** Runs one order action with a busy state and a toast. */
+  async function call(key: string, action: () => Promise<ActionResult>, ok: string, after?: () => void) {
     setBusy(key);
-    const { data, error } = await supabase().rpc(fn, args);
+    const res = await action();
     setBusy(null);
-    const res = data as { ok?: boolean; message?: string } | null;
-    if (error || !res?.ok) {
-      toast(res?.message ?? "Couldn't update. Check your internet and try again.", "error");
-      return;
-    }
+    if (!res.ok) return toast(res.message ?? "Couldn't update. Check your internet and try again.", "error");
     toast(ok);
-    if (fn === "update_order_status" && args.p_to === "confirmed") requestOrderEmail(o.public_token, "packing");
+    after?.();
     onChanged();
   }
 
@@ -115,7 +80,7 @@ export function OrderCard({
       <div className="flex items-start justify-between gap-3 px-4 pt-4">
         <div>
           <p className="font-display text-[22px] font-extrabold leading-none">
-            VS-{o.order_no}
+            {orderLabel(o.order_no)}
             {detailLink && (
               <Link href={`/admin/order?id=${o.id}`} className="ml-2 align-middle text-[13px] font-semibold text-indigo-700 underline">
                 Details
@@ -123,7 +88,7 @@ export function OrderCard({
             )}
           </p>
           <p className="mt-1 text-[13px] text-muted">
-            {new Date(o.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" })}, {istTime(o.created_at)}
+            {istDate(o.created_at)}, {istTime(o.created_at)}
             {o.eta_minutes && o.status !== "delivered" && o.status !== "cancelled" ? `, deliver in ${o.eta_minutes} min` : ""}
           </p>
         </div>
@@ -152,7 +117,7 @@ export function OrderCard({
                     return;
                   }
                   setArmed(null);
-                  call(`na-${i.id}`, "mark_item_unavailable", { p_order_id: o.id, p_item_id: i.id }, "Item removed, bill updated");
+                  call(`na-${i.id}`, () => orderActions.removeItem(o.id, i.id), "Item removed, bill updated");
                 }}
                 className={`shrink-0 rounded-lg px-2 py-1 text-[12px] font-bold ${armed === i.id ? "bg-rose-600 text-white" : "bg-rose-50 text-rose-700 ring-1 ring-rose-200"}`}
               >
@@ -184,7 +149,7 @@ export function OrderCard({
             <Icon name="phone" className="size-4" /> Call
           </a>
           <a href={wa} target="_blank" rel="noopener" className="flex h-11 items-center justify-center gap-1.5 rounded-xl bg-[#25d366] text-[14px] font-bold text-[#073b20]">
-            <WaIcon className="size-4" /> WhatsApp
+            <WhatsAppIcon className="size-4" /> WhatsApp
           </a>
           <a
             href={o.delivery_lat != null && o.delivery_lng != null ? `https://www.google.com/maps/dir/?api=1&destination=${o.delivery_lat},${o.delivery_lng}` : maps}
@@ -238,7 +203,10 @@ export function OrderCard({
               type="button"
               disabled={busy !== null}
               onClick={() =>
-                call("next", "update_order_status", { p_order_id: o.id, p_to: next.to, p_eta_minutes: o.status === "new" ? eta : null }, `${STATUS[next.to].label}: VS-${o.order_no}`)
+                call("next", () => orderActions.advance(o.id, next.to, o.status === "new" ? eta : null), `${STATUS[next.to].label}: ${orderLabel(o.order_no)}`, () => {
+                  // Accepting the order sends the customer the "we're packing" email.
+                  if (next.to === "confirmed") requestOrderEmail(o.public_token, "packing");
+                })
               }
               className={`btn flex-1 text-[16px] ${STATUS[next.to].button}`}
             >
@@ -252,7 +220,7 @@ export function OrderCard({
           <button
             type="button"
             disabled={busy !== null}
-            onClick={() => call("cash", "set_payment_status", { p_order_id: o.id, p_status: "paid" }, "Cash marked as collected")}
+            onClick={() => call("cash", () => orderActions.markPaid(o.id), "Cash marked as collected")}
             className="btn w-full bg-emerald-50 text-emerald-800 ring-1 ring-emerald-300"
           >
             <Icon name="rupee" className="size-5" /> {busy === "cash" ? "Saving…" : `Cash collected, ${formatPaise(o.total_paise)}`}
@@ -263,7 +231,7 @@ export function OrderCard({
           <button
             type="button"
             disabled={busy !== null}
-            onClick={() => call("upi", "set_payment_status", { p_order_id: o.id, p_status: "paid" }, "UPI payment confirmed")}
+            onClick={() => call("upi", () => orderActions.markPaid(o.id), "UPI payment confirmed")}
             className="btn w-full bg-emerald-50 text-emerald-800 ring-1 ring-emerald-300"
           >
             <Icon name="check" className="size-5" /> {busy === "upi" ? "Saving…" : "I got the UPI payment"}
@@ -280,7 +248,7 @@ export function OrderCard({
                 <button
                   type="button"
                   disabled={reason.trim().length < 3 || busy !== null}
-                  onClick={() => call("cancel", "update_order_status", { p_order_id: o.id, p_to: "cancelled", p_note: reason.trim() }, "Order cancelled, stock restored")}
+                  onClick={() => call("cancel", () => orderActions.cancel(o.id, reason.trim()), "Order cancelled, stock restored")}
                   className="btn bg-rose-600 text-white"
                 >
                   {busy === "cancel" ? "Cancelling…" : "Cancel order"}

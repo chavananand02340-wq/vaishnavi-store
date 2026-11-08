@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import type { CardProduct } from "@/lib/cards";
-import { boughtProductIds, useFavourites, useSavedOrders } from "@/lib/local";
-import { Icon } from "@/components/Icon";
-import { ProductRow } from "./ProductCard";
+import { boughtProductIds, useFavourites, useSavedOrders } from "@/state/device-store";
+import { Icon } from "@/components/ui/Icon";
+import { ProductRow } from "@/components/store/ProductCard";
+import { type CardProduct } from "@/types/catalog";
 
 /** Rows only this customer sees: things they bought before, and their ❤️ favourites. */
 export function ForYou({ catalog }: { catalog: CardProduct[] }) {

@@ -1,32 +1,21 @@
 import type { MetadataRoute } from "next";
-import { createClient } from "@supabase/supabase-js";
-import { LEGAL_LINKS } from "@/lib/legal-links";
+import { publicEnv } from "@/config/env";
+import { LEGAL_LINKS } from "@/config/site";
+import { getSitemapRows } from "@/services/catalog";
 
 export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const site = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const site = publicEnv.siteUrl;
   if (!site) return [];
   const entries: MetadataRoute.Sitemap = [
     { url: site, changeFrequency: "daily", priority: 1 },
     { url: `${site}/categories`, changeFrequency: "daily", priority: 0.8 },
     ...LEGAL_LINKS.map((l) => ({ url: `${site}${l.href}`, changeFrequency: "monthly" as const, priority: 0.3 })),
   ];
-  if (!url || !key) return entries;
-
-  try {
-    // Public data only, read with the anon key (no cookies needed here).
-    const supabase = createClient(url, key, { auth: { persistSession: false } });
-    const [{ data: cats }, { data: prods }] = await Promise.all([
-      supabase.from("categories").select("slug, updated_at").eq("is_active", true),
-      supabase.from("products").select("id, updated_at").eq("is_active", true).limit(5000),
-    ]);
-    for (const c of cats ?? []) entries.push({ url: `${site}/c/${c.slug}`, lastModified: c.updated_at, changeFrequency: "daily", priority: 0.8 });
-    for (const p of prods ?? []) entries.push({ url: `${site}/p/${p.id}`, lastModified: p.updated_at, changeFrequency: "weekly", priority: 0.6 });
-  } catch {
-    /* sitemap still works with the home page only */
-  }
+  // If the database can't be reached the sitemap still lists the main pages.
+  const { categories, products } = await getSitemapRows().catch(() => ({ categories: [], products: [] }));
+  for (const c of categories) entries.push({ url: `${site}/c/${c.slug}`, lastModified: c.updated_at, changeFrequency: "daily", priority: 0.8 });
+  for (const p of products) entries.push({ url: `${site}/p/${p.id}`, lastModified: p.updated_at, changeFrequency: "weekly", priority: 0.6 });
   return entries;
 }

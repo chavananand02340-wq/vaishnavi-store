@@ -2,13 +2,15 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase/browser";
+import { getTrackedOrder } from "@/services/orders";
+import type { TrackedOrder } from "@/types/order";
 import { formatPaise } from "@/lib/money";
-import { useSavedOrders, type SavedOrder } from "@/lib/local";
-import { useCart } from "@/components/store/cart";
+import { orderLabel } from "@/config/site";
+import { useSavedOrders, type SavedOrder } from "@/state/device-store";
+import { useCart } from "@/state/cart";
 import { StoreHeader } from "@/components/store/StoreHeader";
-import { Icon } from "@/components/Icon";
-import { useToast } from "@/components/Toast";
+import { Icon } from "@/components/ui/Icon";
+import { useToast } from "@/components/ui/Toast";
 
 const STATUS: Record<string, { text: string; cls: string }> = {
   new: { text: "Order received", cls: "bg-amber-100 text-amber-900" },
@@ -18,7 +20,7 @@ const STATUS: Record<string, { text: string; cls: string }> = {
   cancelled: { text: "Cancelled", cls: "bg-neutral-200 text-neutral-700" },
 };
 
-type Live = { status: string; total_paise: number; payment_status: string; payment_method: string };
+type Live = Pick<TrackedOrder, "status" | "total_paise" | "payment_status" | "payment_method">;
 
 function OrderRow({ o, live }: { o: SavedOrder; live: Live | null | undefined }) {
   const { add } = useCart();
@@ -39,7 +41,7 @@ function OrderRow({ o, live }: { o: SavedOrder; live: Live | null | undefined })
           ))}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-[16px] font-extrabold">VS-{o.no}</p>
+          <p className="text-[16px] font-extrabold">{orderLabel(o.no)}</p>
           <p className="text-[13px] text-muted">
             {new Date(o.at).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })} · {count} item{count === 1 ? "" : "s"}
           </p>
@@ -81,10 +83,12 @@ export default function OrdersPage() {
 
   useEffect(() => {
     if (!ready || !orders.length) return;
-    const sb = supabase();
-    orders.slice(0, 15).forEach(async (o) => {
-      const { data } = await sb.rpc("get_order_by_token", { p_token: o.token });
-      setLive((m) => ({ ...m, [o.token]: (data as Live | null) ?? null }));
+    orders.slice(0, 15).forEach((o) => {
+      getTrackedOrder(o.token)
+        .then((t) => setLive((m) => ({ ...m, [o.token]: t })))
+        .catch(() => {
+          /* offline: the row just shows what this phone remembers */
+        });
     });
   }, [ready, orders]);
 

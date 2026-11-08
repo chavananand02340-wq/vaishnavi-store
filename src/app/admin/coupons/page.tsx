@@ -1,46 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "@/lib/supabase/browser";
+import { createCoupon, deleteCoupon, listAllCoupons, updateCoupon, type Coupon, type CouponForm } from "@/services/admin/marketing";
+import { istDate } from "@/lib/time";
 import { formatPaise, rupeesToPaise } from "@/lib/money";
-import { useAsync, must } from "@/lib/useAsync";
-import { Card, CardTitle, Empty, ErrorBox, PageTitle, Spinner, Switch } from "@/components/admin/ui";
-import { Icon } from "@/components/Icon";
-import { useToast } from "@/components/Toast";
+import { useAsync } from "@/hooks/useAsync";
+import { useAction } from "@/hooks/useAction";
+import { Card, CardTitle, Empty, ErrorBox, PageTitle, Spinner, Switch } from "@/components/admin/AdminUI";
+import { Icon } from "@/components/ui/Icon";
+import { useToast } from "@/components/ui/Toast";
 
-type Coupon = {
-  id: string;
-  code: string;
-  description: string | null;
-  kind: "percent" | "flat";
-  value: number;
-  min_order_paise: number;
-  max_discount_paise: number | null;
-  starts_at: string | null;
-  ends_at: string | null;
-  usage_limit: number | null;
-  used_count: number;
-  per_phone_limit: number | null;
-  show_in_checkout: boolean;
-  is_active: boolean;
-};
-
-type Form = {
-  code: string;
-  description: string;
-  kind: "percent" | "flat";
-  value: string;
-  min_order: string;
-  max_discount: string;
-  ends_on: string;
-  usage_limit: string;
-  once_per_customer: boolean;
-  show_in_checkout: boolean;
-};
+type Form = CouponForm;
 
 const BLANK: Form = { code: "", description: "", kind: "percent", value: "", min_order: "", max_discount: "", ends_on: "", usage_limit: "", once_per_customer: true, show_in_checkout: true };
-
-const SELECT = "id, code, description, kind, value, min_order_paise, max_discount_paise, starts_at, ends_at, usage_limit, used_count, per_phone_limit, show_in_checkout, is_active";
 
 function summary(c: Pick<Coupon, "kind" | "value" | "min_order_paise" | "max_discount_paise">) {
   const off = c.kind === "percent" ? `${c.value}% off` : `${formatPaise(c.value)} off`;
@@ -58,33 +30,15 @@ function status(c: Coupon): { text: string; cls: string } {
   return { text: "Live", cls: "bg-emerald-100 text-emerald-800" };
 }
 
-/** End of the chosen day, India time. */
-function endOfDayIST(date: string): string | null {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
-  return new Date(`${date}T23:59:59+05:30`).toISOString();
-}
-
 function CouponRow({ c, onChanged }: { c: Coupon; onChanged: () => void }) {
   const toast = useToast();
-  const [busy, setBusy] = useState(false);
+  const { run, isBusy: busy } = useAction();
   const st = status(c);
 
-  async function patch(p: Partial<Coupon>, msg: string) {
-    setBusy(true);
-    const { error } = await supabase().from("coupons").update(p).eq("id", c.id);
-    setBusy(false);
-    if (error) return toast("Couldn't save", "error");
-    toast(msg);
-    onChanged();
-  }
+  const patch = (p: Partial<Coupon>, msg: string) => run("patch", () => updateCoupon(c.id, p), { success: msg, onSuccess: onChanged });
   async function remove() {
     if (!window.confirm(`Delete coupon ${c.code}? Past orders keep their discount.`)) return;
-    setBusy(true);
-    const { error } = await supabase().from("coupons").delete().eq("id", c.id);
-    setBusy(false);
-    if (error) return toast("Couldn't delete", "error");
-    toast(`Deleted ${c.code}`);
-    onChanged();
+    await run("remove", () => deleteCoupon(c.id), { success: `Deleted ${c.code}`, onSuccess: onChanged });
   }
 
   return (
@@ -101,7 +55,7 @@ function CouponRow({ c, onChanged }: { c: Coupon; onChanged: () => void }) {
         Used {c.used_count}
         {c.usage_limit ? ` of ${c.usage_limit}` : ""} times
         {c.per_phone_limit ? `, ${c.per_phone_limit === 1 ? "once" : `${c.per_phone_limit} times`} per customer` : ""}
-        {c.ends_at ? `, ends ${new Date(c.ends_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" })}` : ", no end date"}
+        {c.ends_at ? `, ends ${istDate(c.ends_at)}` : ", no end date"}
       </p>
       <div className="mt-2 grid gap-1 border-t border-line pt-2">
         <Switch checked={c.is_active} disabled={busy} onChange={(x) => patch({ is_active: x }, x ? `${c.code} is on` : `${c.code} is off`)} label="Coupon on" />
@@ -127,53 +81,23 @@ function CouponRow({ c, onChanged }: { c: Coupon; onChanged: () => void }) {
 }
 
 export default function CouponsPage() {
-  const toast = useToast();
   const [f, setF] = useState<Form>(BLANK);
-  const [busy, setBusy] = useState(false);
   const [showForm, setShowForm] = useState(false);
-  const { data, error, loading, reload } = useAsync(async () => must(await supabase().from("coupons").select(SELECT).order("created_at", { ascending: false })) as Coupon[]);
+  const { run, isBusy: busy } = useAction();
+  const { data, error, loading, reload } = useAsync(listAllCoupons);
 
   const set = (k: keyof Form) => (e: React.ChangeEvent<HTMLInputElement>) => setF((p) => ({ ...p, [k]: k === "code" ? e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "") : e.target.value }));
 
   async function create(e: React.FormEvent) {
     e.preventDefault();
-    if (!/^[A-Z0-9]{3,20}$/.test(f.code)) return toast("Code: 3 to 20 letters or numbers, no spaces", "error");
-    let value: number | null;
-    if (f.kind === "percent") {
-      value = Number(f.value);
-      if (!Number.isInteger(value) || value < 1 || value > 90) return toast("Percent must be a whole number from 1 to 90", "error");
-    } else {
-      value = rupeesToPaise(f.value);
-      if (!value || value <= 0) return toast("Enter the rupees off", "error");
-    }
-    const min = f.min_order.trim() ? rupeesToPaise(f.min_order) : 0;
-    if (min == null) return toast("Minimum order isn't a valid amount", "error");
-    const cap = f.kind === "percent" && f.max_discount.trim() ? rupeesToPaise(f.max_discount) : null;
-    if (f.kind === "percent" && f.max_discount.trim() && !cap) return toast("Maximum discount isn't a valid amount", "error");
-    const limit = f.usage_limit.trim() ? Number(f.usage_limit) : null;
-    if (limit != null && (!Number.isInteger(limit) || limit < 1)) return toast("Total uses must be a whole number", "error");
-    const ends = f.ends_on ? endOfDayIST(f.ends_on) : null;
-
-    setBusy(true);
-    const { error: err } = await supabase().from("coupons").insert({
-      code: f.code,
-      description: f.description.trim() || null,
-      kind: f.kind,
-      value,
-      min_order_paise: min,
-      max_discount_paise: cap,
-      ends_at: ends,
-      usage_limit: limit,
-      per_phone_limit: f.once_per_customer ? 1 : null,
-      show_in_checkout: f.show_in_checkout,
-      is_active: true,
+    await run("create", () => createCoupon(f), {
+      success: (code) => `Coupon ${code} is live`,
+      onSuccess: () => {
+        setF(BLANK);
+        setShowForm(false);
+        reload();
+      },
     });
-    setBusy(false);
-    if (err) return toast(err.code === "23505" ? `${f.code} already exists` : "Couldn't create coupon", "error");
-    toast(`Coupon ${f.code} is live`);
-    setF(BLANK);
-    setShowForm(false);
-    reload();
   }
 
   const preview = f.value

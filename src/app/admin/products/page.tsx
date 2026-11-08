@@ -3,14 +3,14 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useMemo, useState } from "react";
-import { supabase } from "@/lib/supabase/browser";
+import { listProducts, setStock } from "@/services/admin/catalog";
 import { formatPaise } from "@/lib/money";
-import { PRODUCT_SELECT, effectivePrice, mainImage, type Category, type Product } from "@/lib/catalog";
-import { useAsync, must } from "@/lib/useAsync";
-import { refreshStorefront } from "@/components/admin/team";
-import { Empty, ErrorBox, PageTitle, Spinner } from "@/components/admin/ui";
-import { Icon } from "@/components/Icon";
-import { useToast } from "@/components/Toast";
+import { effectivePrice, mainImage } from "@/lib/catalog";
+import { useAsync } from "@/hooks/useAsync";
+import { useAction } from "@/hooks/useAction";
+import { Empty, ErrorBox, PageTitle, Spinner } from "@/components/admin/AdminUI";
+import { Icon } from "@/components/ui/Icon";
+import { type Category, type Product } from "@/types/catalog";
 
 type Filter = "" | "low" | "out" | "hidden" | "featured" | "nophoto";
 const FILTERS: { key: Filter; label: string }[] = [
@@ -23,21 +23,10 @@ const FILTERS: { key: Filter; label: string }[] = [
 ];
 
 function StockInput({ id, value, low, onSaved }: { id: string; value: number; low: boolean; onSaved: (v: number) => void }) {
-  const toast = useToast();
   const [v, setV] = useState(String(value));
-  const [saving, setSaving] = useState(false);
+  const { run, isBusy: saving } = useAction();
   const dirty = v !== String(value);
-  async function save() {
-    const n = Number(v);
-    if (!Number.isInteger(n) || n < 0) return toast("Stock must be 0 or more", "error");
-    setSaving(true);
-    const { error } = await supabase().from("product_variants").update({ stock_qty: n }).eq("id", id);
-    setSaving(false);
-    if (error) return toast("Couldn't save stock", "error");
-    onSaved(n);
-    toast("Stock updated");
-    void refreshStorefront();
-  }
+  const save = () => run("stock", () => setStock(id, Number(v)), { success: "Stock updated", refreshStore: true, onSuccess: () => onSaved(Number(v)) });
   return (
     <span className="flex items-center gap-1.5">
       <input
@@ -66,19 +55,7 @@ function ProductsInner() {
   const cat = sp.get("cat") ?? "";
   const [q, setQ] = useState("");
 
-  const { data, error, loading, reload, setData } = useAsync(async () => {
-    const sb = supabase();
-    const [p, c, s] = await Promise.all([
-      sb.from("products").select(`${PRODUCT_SELECT}, search_keywords`).order("name").limit(3000),
-      sb.from("categories").select("id, name, slug, sort_order, is_active, image_path").order("sort_order"),
-      sb.from("store_settings").select("low_stock_threshold").eq("id", 1).single(),
-    ]);
-    return {
-      products: must(p) as unknown as Product[],
-      categories: must(c) as unknown as Category[],
-      low: (s.data?.low_stock_threshold as number) ?? 5,
-    };
-  });
+  const { data, error, loading, reload, setData } = useAsync(listProducts);
 
   const list = useMemo(() => {
     if (!data) return [];
@@ -87,7 +64,7 @@ function ProductsInner() {
       const vs = p.product_variants.filter((v) => v.is_active);
       if (cat && p.category_id !== cat) return false;
       if (term && !`${p.name} ${p.search_keywords ?? ""}`.toLowerCase().includes(term)) return false;
-      if (filter === "low") return vs.some((v) => v.stock_qty <= data.low);
+      if (filter === "low") return vs.some((v) => v.stock_qty <= data.lowStockAt);
       if (filter === "out") return vs.length > 0 && vs.every((v) => v.stock_qty === 0);
       if (filter === "hidden") return !p.is_active;
       if (filter === "featured") return p.is_featured;
@@ -190,7 +167,7 @@ function ProductsInner() {
                         <StockInput
                           id={v.id}
                           value={v.stock_qty}
-                          low={v.stock_qty <= (data?.low ?? 5)}
+                          low={v.stock_qty <= (data?.lowStockAt ?? 5)}
                           onSaved={(n) =>
                             data &&
                             setData({

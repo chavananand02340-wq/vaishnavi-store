@@ -1,9 +1,9 @@
-import { getSettings } from "@/lib/store-data";
-import { CartProvider } from "@/components/store/cart";
+import { getSettings } from "@/services/catalog";
+import { CartProvider } from "@/state/cart";
 import { CartBar } from "@/components/store/CartBar";
 import { BottomNav } from "@/components/store/BottomNav";
 import { StoreFooter } from "@/components/store/StoreFooter";
-import { ToastProvider } from "@/components/Toast";
+import { ToastProvider } from "@/components/ui/Toast";
 
 // Store pages are cached and refreshed at most every 15 minutes,
 // and immediately when the owner changes products or settings.

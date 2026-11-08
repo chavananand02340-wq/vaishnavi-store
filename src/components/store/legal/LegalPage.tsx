@@ -1,7 +1,7 @@
 import Link from "next/link";
-import type { PublicSettings } from "@/lib/store-data";
 import { StoreHeader } from "@/components/store/StoreHeader";
-import { LEGAL_LINKS } from "@/lib/legal-links";
+import { LEGAL_LINKS } from "@/config/site";
+import { type PublicSettings } from "@/types/settings";
 
 export const UPDATED = "25 October 2026";
 

@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { formatPaise } from "@/lib/money";
-import { Icon } from "@/components/Icon";
-import { useCart } from "./cart";
+import { Icon } from "@/components/ui/Icon";
+import { useCart } from "@/state/cart";
 
 /** Free-delivery progress — the one place the store spends colour on motion. */
 export function FreeDeliveryMeter({ subtotal, dark = false }: { subtotal: number; dark?: boolean }) {

@@ -3,16 +3,16 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
-import { supabase } from "@/lib/supabase/browser";
+import { ORDER_RANGES, listOrders, type OrderRange } from "@/services/admin/orders";
 import { formatPaise } from "@/lib/money";
-import { istDayStartISO, istTime } from "@/lib/hours";
-import { useAsync } from "@/lib/useAsync";
-import { Empty, ErrorBox, PageTitle, Spinner, STATUS, StatusPill } from "@/components/admin/ui";
+import { orderLabel } from "@/config/site";
+import { istDate, istTime } from "@/lib/time";
+import { useAsync } from "@/hooks/useAsync";
+import { Empty, ErrorBox, PageTitle, Spinner, STATUS, StatusPill } from "@/components/admin/AdminUI";
 
 const PAGE = 40;
-const RANGES = { today: { label: "Today", days: 0 }, "7d": { label: "7 days", days: 6 }, "30d": { label: "30 days", days: 29 }, all: { label: "All", days: null } } as const;
-type RangeKey = keyof typeof RANGES;
-type Row = { id: string; order_no: number; customer_name: string; phone: string; total_paise: number; status: string; payment_method: string; payment_status: string; created_at: string };
+const RANGES = ORDER_RANGES;
+type RangeKey = OrderRange;
 
 function OrdersInner() {
   const sp = useSearchParams();
@@ -30,20 +30,7 @@ function OrdersInner() {
   };
 
   const { data, error, loading, reload } = useAsync(async () => {
-    let query = supabase()
-      .from("orders")
-      .select("id, order_no, customer_name, phone, total_paise, status, payment_method, payment_status, created_at", { count: "exact" })
-      .order("created_at", { ascending: false })
-      .range((page - 1) * PAGE, page * PAGE - 1);
-    const days = RANGES[range].days;
-    if (days !== null) query = query.gte("created_at", istDayStartISO(days));
-    if (status) query = query.eq("status", status);
-    const digits = q.replace(/\D/g, "");
-    if (digits.length >= 10) query = query.eq("phone", digits.slice(-10));
-    else if (digits) query = query.eq("order_no", Number(digits));
-    const { data: rows, count, error: e } = await query;
-    if (e) throw new Error(e.message);
-    return { rows: (rows ?? []) as Row[], count: count ?? 0 };
+    return listOrders({ range, status, q, page, pageSize: PAGE });
   }, [range, status, q, page]);
 
   const rows = data?.rows ?? [];
@@ -92,9 +79,9 @@ function OrdersInner() {
             <li key={o.id}>
               <Link href={`/admin/order?id=${o.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-page">
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[15px] font-bold">VS-{o.order_no}, {o.customer_name}</span>
+                  <span className="block truncate text-[15px] font-bold">{orderLabel(o.order_no)}, {o.customer_name}</span>
                   <span className="text-[13px] text-muted">
-                    {new Date(o.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" })}, {istTime(o.created_at)},{" "}
+                    {istDate(o.created_at)}, {istTime(o.created_at)},{" "}
                     {o.payment_method === "cod" ? "cash" : "UPI"} {o.payment_status === "paid" ? "paid" : "not paid"}
                   </span>
                 </span>

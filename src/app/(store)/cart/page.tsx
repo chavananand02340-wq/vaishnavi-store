@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { formatPaise } from "@/lib/money";
-import { useCart } from "@/components/store/cart";
-import { useQuote } from "@/components/store/useQuote";
+import { useCart } from "@/state/cart";
+import { useQuote } from "@/hooks/useQuote";
 import { Stepper, ProductImage } from "@/components/store/ProductCard";
 import { FreeDeliveryMeter } from "@/components/store/CartBar";
 import { useOpenNow } from "@/components/store/StoreHeader";
 import { PageBar } from "@/components/store/PageBar";
 import { Bill } from "@/components/store/Bill";
-import { Icon } from "@/components/Icon";
+import { Icon } from "@/components/ui/Icon";
 
 export default function CartPage() {
   const { ready, lines, setQty, remove, subtotal } = useCart();

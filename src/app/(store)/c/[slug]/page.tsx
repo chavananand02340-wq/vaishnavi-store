@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getCatalog, getCategories } from "@/lib/store-data";
+import { getCatalog, getCategories } from "@/services/catalog";
 import { StoreHeader } from "@/components/store/StoreHeader";
 import { ProductGrid } from "@/components/store/ProductCard";
 
