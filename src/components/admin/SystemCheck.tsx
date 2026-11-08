@@ -21,9 +21,6 @@ export function SystemCheck() {
   const [mail, setMail] = useState<string | null>(null);
   const [busy, setBusy] = useState<"" | "check" | "mail">("");
 
-  return (await r.json().catch(() => ({ ok: false, message: "No reply from the website." }))) as Result;
-  }
-
   return (
     <Card>
       <CardTitle hint="Checks the database, payments and emails are connected. Nothing is charged or changed.">System check</CardTitle>
