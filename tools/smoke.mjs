@@ -75,6 +75,7 @@ if (SB && ANON) {
   await check("db: hidden coupons stay hidden", async () => { const r = await rest("coupons?select=code,show_in_checkout,is_active"); const j = await r.json(); return ok(Array.isArray(j) && j.every((c) => c.show_in_checkout && c.is_active), `${j.length} visible`); });
   await check("db: secrets table not reachable", async () => { const r = await rest("secrets?select=*"); return ok(r.status >= 400, `${r.status}`); });
   await check("db: payment marking needs secret", async () => { const r = await rest("rpc/mark_online_paid", { method: "POST", body: JSON.stringify({ p_secret: "wrong", p_rp_order: "x", p_rp_payment: "y", p_amount_paise: 1 }) }); const j = await r.json(); return ok(j?.ok === false, JSON.stringify(j)); });
+  await check("db: live location saving installed (part 26)", async () => { const r = await rest("rpc/set_order_location", { method: "POST", body: JSON.stringify({ p_token: "00000000-0000-4000-8000-000000000000", p_lat: 20.74, p_lng: 78.6 }) }); const t = await r.text(); return ok(r.status === 200 && t.trim() === "false", `${r.status} ${t.slice(0, 80)}`); });
   await check("db: price check (quote) works", async () => { const r = await rest("rpc/quote_cart", { method: "POST", body: JSON.stringify({ p_items: [] }) }); return ok(r.status === 200, `${r.status}`); });
 }
 
